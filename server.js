@@ -19,6 +19,11 @@ app.use((req, res, next) => {
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Clean URL for admin dashboard
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 // Route mounting — only 3 route groups
 app.use('/api/webhook', require('./src/routes/webhook'));
 app.use('/api/download', require('./src/routes/download'));
