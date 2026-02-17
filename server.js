@@ -6,23 +6,23 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json());
+// JSON body parser for all routes EXCEPT webhook
+app.use((req, res, next) => {
+  if (req.path === '/api/webhook') {
+    // Webhook needs raw body for HMAC signature verification
+    express.raw({ type: 'application/json' })(req, res, next);
+  } else {
+    express.json()(req, res, next);
+  }
+});
+
+// Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route mounting
-app.use('/api/session', require('./src/routes/session'));
-app.use('/api/session', require('./src/routes/conversation'));
-app.use('/api/tts', require('./src/routes/tts'));
+// Route mounting — only 3 route groups
+app.use('/api/webhook', require('./src/routes/webhook'));
 app.use('/api/download', require('./src/routes/download'));
 app.use('/api/admin', require('./src/routes/admin'));
-
-// Deepgram token endpoint (inline)
-app.get('/api/deepgram-token', (req, res) => {
-  const key = process.env.DEEPGRAM_API_KEY;
-  if (!key) return res.json({ configured: false });
-  res.json({ key, configured: true });
-});
 
 // Global error handler
 app.use((err, req, res, next) => {

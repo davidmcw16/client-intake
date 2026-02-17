@@ -2,63 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Voice Intake</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <!-- Screen 1: Welcome -->
-  <div id="screen-welcome" class="screen active">
-    <div class="container">
+  <div class="container">
+    <header class="header">
       <h1>Tell me about your project</h1>
-      <p class="subtitle">I'll have a quick chat with you to understand your idea. Just speak naturally -- no technical knowledge needed.</p>
-      <button id="btn-begin" class="btn-primary">Tap to Begin</button>
-    </div>
-  </div>
+      <p class="subtitle">I'll have a quick chat with you to understand your idea.
+         Just speak naturally — no technical knowledge needed.</p>
+      <p class="note">Please don't close this page during the conversation.</p>
+    </header>
 
-  <!-- Screen 2: Conversation -->
-  <div id="screen-conversation" class="screen">
-    <div class="conversation-layout">
-      <div class="conversation-top">
-        <div id="voice-orb" class="orb orb-idle">
-          <span id="orb-icon"></span>
-        </div>
-        <p id="orb-label" class="orb-label"></p>
-        <div id="ai-message" class="ai-message"></div>
-      </div>
-      <div class="conversation-bottom">
-        <div id="transcript-area" class="transcript-area hidden">
-          <p id="transcript-text"></p>
-        </div>
-        <button id="btn-ptt" class="btn-ptt hidden">
-          <span id="ptt-icon">&#127908;</span>
-        </button>
-        <p id="ptt-label" class="ptt-label hidden">Tap to speak</p>
-        <div id="text-input-area" class="text-input-area hidden">
-          <textarea id="text-input" placeholder="Type your answer..."></textarea>
-          <button id="btn-send-text" class="btn-primary">Send</button>
-        </div>
-        <a id="toggle-input-mode" class="toggle-link hidden" href="#">Switch to typing</a>
-      </div>
+    <!-- ElevenLabs widget renders here -->
+    <div id="widget-container">
+      <elevenlabs-convai agent-id="agent_1401k39er2refh4s5fgd80jgskbt"></elevenlabs-convai>
     </div>
-  </div>
 
-  <!-- Screen 3: Summary -->
-  <div id="screen-summary" class="screen">
-    <div class="container">
+    <!-- Shown after conversation completes -->
+    <div id="download-section" class="hidden">
       <div class="success-icon">&#10003;</div>
-      <h1>Your Project Brief is Ready</h1>
-      <p class="subtitle">Thanks for sharing your idea! Here's your project brief.</p>
-      <button id="btn-download" class="btn-primary">Download Brief</button>
+      <h2>Your Project Brief is Ready</h2>
+      <p class="subtitle" id="download-status">Preparing your brief...</p>
+      <div id="download-spinner" class="spinner"></div>
+      <button id="btn-download" class="btn-primary hidden">Download Brief</button>
       <a id="btn-start-over" class="toggle-link" href="#">Start Over</a>
     </div>
   </div>
 
-  <!-- Toast container -->
-  <div id="toast-container"></div>
+  <!-- ElevenLabs Conversational AI SDK -->
+  <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
+  <script>
+    let conversationId = null;
+    let pollCount = 0;
+    const MAX_POLLS = 15;
+    const POLL_INTERVAL_MS = 2000;
 
-  <script src="/js/ui.js"></script>
-  <script src="/js/voice-engine.js"></script>
-  <script src="/js/app.js"></script>
+    // Listen for ElevenLabs widget events
+    document.addEventListener('elevenlabs-convai:call-ended', (event) => {
+      conversationId = event.detail?.conversationId || event.detail?.conversation_id;
+      if (!conversationId) {
+        console.warn('No conversation ID in call-ended event');
+        return;
+      }
+
+      // Show download section with spinner
+      document.getElementById('widget-container').classList.add('hidden');
+      document.getElementById('download-section').classList.remove('hidden');
+      document.getElementById('download-status').textContent = 'Preparing your brief...';
+      document.getElementById('download-spinner').classList.remove('hidden');
+
+      pollForBrief();
+    });
+
+    async function pollForBrief() {
+      if (pollCount >= MAX_POLLS) {
+        document.getElementById('download-status').textContent =
+          'Your brief is being prepared and will be available shortly. Please check back in a moment.';
+        document.getElementById('download-spinner').classList.add('hidden');
+        showDownloadButton();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/download/${conversationId}`, { method: 'HEAD' });
+        if (res.ok) {
+          document.getElementById('download-status').textContent = 'Your brief is ready to download.';
+          document.getElementById('download-spinner').classList.add('hidden');
+          showDownloadButton();
+          return;
+        }
+      } catch (err) {
+        console.warn('Poll attempt failed:', err);
+      }
+
+      pollCount++;
+      setTimeout(pollForBrief, POLL_INTERVAL_MS);
+    }
+
+    function showDownloadButton() {
+      const btn = document.getElementById('btn-download');
+      btn.classList.remove('hidden');
+      btn.addEventListener('click', () => {
+        window.location.href = `/api/download/${conversationId}`;
+      });
+    }
+
+    // Start Over
+    document.getElementById('btn-start-over').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.reload();
+    });
+  </script>
 </body>
 </html>

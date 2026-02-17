@@ -553,7 +553,7 @@
         dashboard.style.display = 'block';
 
         const data = await res.json();
-        renderIntakes(data);
+        renderIntakes(data.intakes || data);
       } catch (err) {
         authError.textContent = 'Connection failed. Is the server running?';
       } finally {
@@ -591,11 +591,24 @@
 
       const clientName = intake.client_name || intake.clientName || 'Unknown';
       const date = formatDate(intake.created_at || intake.createdAt);
-      const duration = formatDuration(intake.duration_seconds || intake.durationSeconds);
+      const durationMs = intake.duration_ms || intake.durationMs || (intake.duration_seconds || intake.durationSeconds || 0) * 1000;
+      const duration = formatDuration(durationMs / 1000);
       const turns = intake.turn_count || intake.turnCount || 0;
-      const confidence = intake.overall_confidence || intake.overallConfidence || 0;
+      const confidenceObj = intake.confidence || {};
+      const scores = Object.values(confidenceObj).filter(v => typeof v === 'number');
+      const confidence = scores.length > 0
+        ? scores.reduce((a, b) => a + b, 0) / scores.length
+        : (intake.overall_confidence || intake.overallConfidence || 0);
       const confClass = confidence >= 0.7 ? 'green' : confidence >= 0.4 ? 'yellow' : 'red';
-      const vision = truncate(intake.vision || intake.project_vision || '', 100);
+      let vision = '';
+      if (intake.markdown) {
+        const visionMatch = intake.markdown.match(/### Vision\n+([^\n#]+)/);
+        if (visionMatch) {
+          vision = truncate(visionMatch[1].trim(), 100);
+        } else {
+          vision = truncate(intake.markdown.substring(0, 100), 100);
+        }
+      }
 
       row.innerHTML = `
         <div class="intake-row-header">
@@ -604,7 +617,7 @@
           <span class="intake-duration">${duration}</span>
           <span class="intake-turns">${turns} turns</span>
           <span class="confidence-dot ${confClass}" title="Confidence: ${Math.round(confidence * 100)}%"></span>
-          <span class="intake-vision" title="${escapeHtml(intake.vision || intake.project_vision || '')}">${escapeHtml(vision)}</span>
+          <span class="intake-vision" title="${escapeHtml(vision)}">${escapeHtml(vision)}</span>
           <span class="intake-actions">
             <button class="btn-icon download" onclick="event.stopPropagation(); downloadIntake('${intake.id}', '${escapeAttr(clientName)}')">Download</button>
             <button class="btn-icon delete" onclick="event.stopPropagation(); deleteIntake('${intake.id}', this)">Delete</button>
@@ -634,26 +647,13 @@
 
       const detail = row.querySelector('.intake-detail');
 
-      // Only fetch full detail if not already loaded
       if (!detail.dataset.loaded) {
-        detail.innerHTML = '<div style="padding:20px;text-align:center;"><span class="spinner"></span></div>';
-        row.classList.add('expanded');
-
-        try {
-          const res = await fetch(`/api/admin/intakes/${intake.id}`, {
-            headers: { 'Authorization': `Bearer ${password}` }
-          });
-
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const full = await res.json();
-          detail.innerHTML = buildDetailHtml(full);
-          detail.dataset.loaded = 'true';
-        } catch (err) {
-          detail.innerHTML = `<div style="padding:20px;color:var(--red);">Failed to load details: ${escapeHtml(err.message)}</div>`;
-        }
-      } else {
-        row.classList.add('expanded');
+        // Use the intake data we already have from the list response
+        detail.innerHTML = buildDetailHtml(intake);
+        detail.dataset.loaded = 'true';
       }
+
+      row.classList.add('expanded');
     }
 
     function buildDetailHtml(intake) {
