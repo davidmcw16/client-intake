@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>Voice Intake</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <!-- Screen 1: Welcome -->
+  <div id="screen-welcome" class="screen active">
+    <div class="container">
+      <h1>Tell me about your project</h1>
+      <p class="subtitle">I'll have a quick chat with you to understand your idea. Just speak naturally -- no technical knowledge needed.</p>
+      <button id="btn-begin" class="btn-primary">Tap to Begin</button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Conversation -->
+  <div id="screen-conversation" class="screen">
+    <div class="container">
+      <div id="voice-orb" class="orb orb-idle">
+        <span id="orb-icon"></span>
+      </div>
+      <p id="orb-label" class="orb-label"></p>
+      <div id="ai-message" class="ai-message"></div>
+      <div id="transcript-area" class="transcript-area hidden">
+        <p id="transcript-text"></p>
+      </div>
+      <div id="voice-controls" class="controls hidden">
+        <button id="btn-done-speaking" class="btn-secondary">Done Speaking</button>
+      </div>
+      <div id="review-controls" class="controls hidden">
+        <button id="btn-try-again" class="btn-ghost">Try Again</button>
+        <button id="btn-send" class="btn-primary">Send</button>
+      </div>
+      <div id="text-input-area" class="text-input-area hidden">
+        <textarea id="text-input" placeholder="Type your answer..."></textarea>
+        <button id="btn-send-text" class="btn-primary">Send</button>
+      </div>
+      <a id="toggle-input-mode" class="toggle-link hidden" href="#">Switch to typing</a>
+    </div>
+  </div>
+
+  <!-- Screen 3: Summary -->
+  <div id="screen-summary" class="screen">
+    <div class="container">
+      <div class="success-icon">&#10003;</div>
+      <h1>Your Project Brief is Ready</h1>
+      <p class="subtitle">Thanks for sharing your idea! Here's your project brief.</p>
+      <button id="btn-download" class="btn-primary">Download Brief</button>
+      <a id="btn-start-over" class="toggle-link" href="#">Start Over</a>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <script src="/js/ui.js"></script>
+  <script src="/js/voice-engine.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
