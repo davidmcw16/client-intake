@@ -6,8 +6,17 @@ window.VoiceEngine = (() => {
   let dgSocket = null;
   let recognition = null;
   let currentAudio = null;
+  let isSpeaking = false;
 
   async function init() {
+    // Pre-warm browser TTS voices
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = function () {
+        window.speechSynthesis.getVoices();
+      };
+    }
+
     try {
       const res = await fetch('/api/deepgram-token');
       const data = await res.json();
@@ -126,6 +135,7 @@ window.VoiceEngine = (() => {
   }
 
   async function speak(text) {
+    isSpeaking = true;
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -145,14 +155,16 @@ window.VoiceEngine = (() => {
           currentAudio.onended = () => {
             URL.revokeObjectURL(url);
             currentAudio = null;
+            isSpeaking = false;
             resolve();
           };
           currentAudio.onerror = () => {
             URL.revokeObjectURL(url);
             currentAudio = null;
+            isSpeaking = false;
             resolve();
           };
-          currentAudio.play().catch(() => resolve());
+          currentAudio.play().catch(() => { isSpeaking = false; resolve(); });
         });
       }
 
@@ -165,18 +177,25 @@ window.VoiceEngine = (() => {
   function speakBrowser(text) {
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
+      var voices = window.speechSynthesis.getVoices();
       var utterance = new SpeechSynthesisUtterance(text);
+      // Pick a good English voice if available
+      var preferred = voices.filter(function (v) { return v.lang.indexOf('en') === 0; });
+      if (preferred.length > 0) utterance.voice = preferred[0];
+      utterance.rate = 1.05;
       return new Promise(function (resolve) {
-        var timeout = setTimeout(resolve, Math.max(3000, text.length * 80));
-        utterance.onend = function () { clearTimeout(timeout); resolve(); };
-        utterance.onerror = function () { clearTimeout(timeout); resolve(); };
+        var timeout = setTimeout(function () { isSpeaking = false; resolve(); }, Math.max(3000, text.length * 80));
+        utterance.onend = function () { clearTimeout(timeout); isSpeaking = false; resolve(); };
+        utterance.onerror = function () { clearTimeout(timeout); isSpeaking = false; resolve(); };
         window.speechSynthesis.speak(utterance);
       });
     }
+    isSpeaking = false;
     return Promise.resolve();
   }
 
   function stopSpeaking() {
+    isSpeaking = false;
     if (currentAudio) {
       currentAudio.pause();
       currentAudio = null;
@@ -184,6 +203,10 @@ window.VoiceEngine = (() => {
     if (window.speechSynthesis && window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
     }
+  }
+
+  function getIsSpeaking() {
+    return isSpeaking;
   }
 
   async function requestMicPermission() {
@@ -206,6 +229,7 @@ window.VoiceEngine = (() => {
     stopListening,
     speak,
     stopSpeaking,
+    getIsSpeaking,
     requestMicPermission,
     getMode
   };
