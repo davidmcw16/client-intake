@@ -6,30 +6,31 @@ window.UI = (() => {
   const aiMessage = document.getElementById('ai-message');
   const transcriptArea = document.getElementById('transcript-area');
   const transcriptText = document.getElementById('transcript-text');
-  const voiceControls = document.getElementById('voice-controls');
-  const reviewControls = document.getElementById('review-controls');
   const textInputArea = document.getElementById('text-input-area');
   const textInput = document.getElementById('text-input');
   const toggleLink = document.getElementById('toggle-input-mode');
   const toastContainer = document.getElementById('toast-container');
+  const btnPtt = document.getElementById('btn-ptt');
+  const pttIcon = document.getElementById('ptt-icon');
+  const pttLabel = document.getElementById('ptt-label');
 
   const orbStates = {
     speaking: { icon: '\u{1F50A}', label: 'Speaking...' },
-    listening: { icon: '\u{1F3A4}', label: 'Your turn...' },
+    listening: { icon: '\u{1F3A4}', label: 'Listening...' },
     thinking: { icon: '\u2022\u2022\u2022', label: 'Thinking...' },
     idle: { icon: '', label: '' }
   };
 
   function showScreen(screenId) {
     screens.forEach(s => s.classList.remove('active'));
-    const target = document.getElementById(screenId);
+    var target = document.getElementById(screenId);
     if (target) target.classList.add('active');
   }
 
   function setOrbState(state) {
     orb.classList.remove('orb-speaking', 'orb-listening', 'orb-thinking', 'orb-idle');
     orb.classList.add('orb-' + state);
-    const config = orbStates[state] || orbStates.idle;
+    var config = orbStates[state] || orbStates.idle;
     orbIcon.innerHTML = config.icon;
     orbLabel.textContent = config.label;
   }
@@ -39,39 +40,41 @@ window.UI = (() => {
     aiMessage.classList.remove('hidden');
   }
 
-  function showTranscript(text, isFinal) {
+  function showTranscript(text) {
     transcriptText.textContent = text;
     transcriptArea.classList.remove('hidden');
-    if (isFinal) showReviewControls();
   }
 
   function hideTranscript() {
     transcriptArea.classList.add('hidden');
   }
 
-  function showVoiceControls() {
-    voiceControls.classList.remove('hidden');
-    reviewControls.classList.add('hidden');
+  function showPTT(recording) {
+    btnPtt.classList.remove('hidden');
+    pttLabel.classList.remove('hidden');
     textInputArea.classList.add('hidden');
+
+    if (recording) {
+      btnPtt.classList.add('recording');
+      pttIcon.textContent = '\u2B06\uFE0F';
+      pttLabel.textContent = 'Tap to send';
+    } else {
+      btnPtt.classList.remove('recording');
+      pttIcon.textContent = '\u{1F3A4}';
+      pttLabel.textContent = 'Tap to speak';
+    }
   }
 
-  function hideVoiceControls() {
-    voiceControls.classList.add('hidden');
-  }
-
-  function showReviewControls() {
-    reviewControls.classList.remove('hidden');
-    voiceControls.classList.add('hidden');
-  }
-
-  function hideReviewControls() {
-    reviewControls.classList.add('hidden');
+  function hidePTT() {
+    btnPtt.classList.add('hidden');
+    btnPtt.classList.remove('recording');
+    pttLabel.classList.add('hidden');
   }
 
   function showTextInput() {
     textInputArea.classList.remove('hidden');
-    voiceControls.classList.add('hidden');
-    reviewControls.classList.add('hidden');
+    btnPtt.classList.add('hidden');
+    pttLabel.classList.add('hidden');
     transcriptArea.classList.add('hidden');
     textInput.focus();
   }
@@ -105,27 +108,18 @@ window.UI = (() => {
     }, duration);
   }
 
-  function getTextInputValue() {
-    var value = textInput.value.trim();
-    textInput.value = '';
-    return value;
-  }
-
   return {
     showScreen,
     setOrbState,
     showAiMessage,
     showTranscript,
     hideTranscript,
-    showVoiceControls,
-    hideVoiceControls,
-    showReviewControls,
-    hideReviewControls,
+    showPTT,
+    hidePTT,
     showTextInput,
     hideTextInput,
     showToggleLink,
     hideToggleLink,
-    showToast,
-    getTextInputValue
+    showToast
   };
 })();

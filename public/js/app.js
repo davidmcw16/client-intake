@@ -1,26 +1,22 @@
 let sessionId = null;
 let isVoiceMode = true;
-let currentTranscript = '';
-let pendingText = '';
-let autoSendTimer = null;
+let segments = [];
+let currentInterim = '';
+let isRecording = false;
 let sending = false;
+let pendingText = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
   var mode = await VoiceEngine.init();
-  if (mode === 'text') {
-    isVoiceMode = false;
-  }
+  if (mode === 'text') isVoiceMode = false;
 
   document.getElementById('btn-begin').addEventListener('click', beginIntake);
-  document.getElementById('btn-done-speaking').addEventListener('click', doneSpeaking);
-  document.getElementById('btn-try-again').addEventListener('click', tryAgain);
-  document.getElementById('btn-send').addEventListener('click', sendVoiceMessage);
+  document.getElementById('btn-ptt').addEventListener('click', toggleRecording);
   document.getElementById('btn-send-text').addEventListener('click', sendTextMessage);
   document.getElementById('toggle-input-mode').addEventListener('click', toggleInputMode);
   document.getElementById('btn-download').addEventListener('click', downloadBrief);
   document.getElementById('btn-start-over').addEventListener('click', startOver);
 
-  // Send text on Enter key
   document.getElementById('text-input').addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -34,7 +30,6 @@ async function beginIntake() {
   UI.setOrbState('thinking');
   UI.showAiMessage('Starting...');
 
-  // Request mic on user gesture before anything else
   if (isVoiceMode) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       UI.showToast('Voice requires HTTPS or localhost. Using text mode.', { duration: 5000, type: 'warning' });
@@ -54,20 +49,20 @@ async function beginIntake() {
     UI.showAiMessage(data.message);
     UI.setOrbState('speaking');
     await VoiceEngine.speak(data.message);
-    startListening();
+    showInput();
   } catch (e) {
     UI.showToast('Failed to start. Please try again.');
     UI.showScreen('screen-welcome');
   }
 }
 
-function startListening() {
+function showInput() {
   if (sending) return;
-  clearAutoSend();
 
   if (!isVoiceMode) {
+    UI.hidePTT();
+    UI.hideTranscript();
     UI.showTextInput();
-    // Restore any pending text that wasn't sent
     if (pendingText) {
       document.getElementById('text-input').value = pendingText;
     }
@@ -76,98 +71,83 @@ function startListening() {
     return;
   }
 
-  UI.setOrbState('listening');
-  UI.showVoiceControls();
-  UI.showToggleLink('Switch to typing');
-  currentTranscript = '';
+  UI.hideTextInput();
   UI.hideTranscript();
+  UI.setOrbState('idle');
+  UI.showPTT(false);
+  UI.showToggleLink('Switch to typing');
+}
+
+function toggleRecording() {
+  if (isRecording) {
+    stopAndSend();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  isRecording = true;
+  segments = [];
+  currentInterim = '';
+  UI.hideTranscript();
+  UI.setOrbState('listening');
+  UI.showPTT(true);
+
   VoiceEngine.startListening(onInterim, onFinal, onSttError);
 }
 
-function onInterim(text) {
-  // Barge-in: if AI is still speaking, stop it
-  if (VoiceEngine.getIsSpeaking()) {
-    VoiceEngine.stopSpeaking();
-    UI.setOrbState('listening');
-  }
+function stopAndSend() {
+  isRecording = false;
+  VoiceEngine.stopListening();
+  UI.showPTT(false);
 
-  currentTranscript = text;
-  UI.showTranscript(text, false);
-  clearAutoSend();
+  var text = getFullTranscript();
+  if (text) {
+    sendMessage(text);
+  } else {
+    UI.showToast("Didn't catch anything. Tap the mic and try again.");
+    showInput();
+  }
+}
+
+function onInterim(text) {
+  if (!isRecording) return;
+  currentInterim = text;
+  UI.showTranscript(getDisplayTranscript());
 }
 
 function onFinal(text) {
-  // Barge-in
-  if (VoiceEngine.getIsSpeaking()) {
-    VoiceEngine.stopSpeaking();
-  }
+  if (!isRecording) return;
+  segments.push(text);
+  currentInterim = '';
+  UI.showTranscript(getDisplayTranscript());
+}
 
-  currentTranscript = text;
-  UI.showTranscript(text, false);
+function getFullTranscript() {
+  var parts = segments.slice();
+  if (currentInterim) parts.push(currentInterim);
+  return parts.join(' ').trim();
+}
 
-  // Auto-send after 1.5s of silence (duplex mode)
-  clearAutoSend();
-  autoSendTimer = setTimeout(function () {
-    if (currentTranscript && !sending) {
-      autoSendVoice();
-    }
-  }, 1500);
+function getDisplayTranscript() {
+  var full = getFullTranscript();
+  return full || 'Listening...';
 }
 
 function onSttError(err) {
+  isRecording = false;
   if (err === 'mic-denied') {
     isVoiceMode = false;
     UI.showToast('Microphone access denied. Switching to typing.', { type: 'warning' });
+    UI.hidePTT();
     UI.showTextInput();
     UI.showToggleLink('Switch to voice');
     UI.setOrbState('idle');
-  }
-}
-
-function clearAutoSend() {
-  if (autoSendTimer) {
-    clearTimeout(autoSendTimer);
-    autoSendTimer = null;
-  }
-}
-
-function doneSpeaking() {
-  clearAutoSend();
-  VoiceEngine.stopListening();
-  if (currentTranscript) {
-    // Send immediately when user taps done
-    sendFromVoice(currentTranscript);
   } else {
-    UI.showToast("I didn't catch that. Try again.");
-    startListening();
+    UI.showToast('Voice connection failed. Try again or switch to typing.', { type: 'warning' });
+    showInput();
   }
-}
-
-function autoSendVoice() {
-  VoiceEngine.stopListening();
-  sendFromVoice(currentTranscript);
-}
-
-async function sendFromVoice(text) {
-  UI.hideReviewControls();
-  UI.showTranscript(text, false);
-  await sendMessage(text);
-}
-
-function tryAgain() {
-  clearAutoSend();
-  UI.hideReviewControls();
-  UI.hideTranscript();
-  currentTranscript = '';
-  startListening();
-}
-
-async function sendVoiceMessage() {
-  clearAutoSend();
-  UI.hideReviewControls();
-  UI.hideTranscript();
-  VoiceEngine.stopListening();
-  await sendMessage(currentTranscript);
 }
 
 async function sendTextMessage() {
@@ -176,7 +156,6 @@ async function sendTextMessage() {
   if (!text) return;
   pendingText = text;
   await sendMessage(text);
-  // Only clear after successful send
   if (!sending) {
     pendingText = '';
     textEl.value = '';
@@ -187,8 +166,10 @@ async function sendMessage(message) {
   if (sending) return;
   sending = true;
   UI.setOrbState('thinking');
-  UI.hideVoiceControls();
+  UI.hidePTT();
+  UI.hideTextInput();
   UI.hideToggleLink();
+  UI.hideTranscript();
 
   try {
     var data = await apiCall('/api/session/' + sessionId + '/message', {
@@ -203,52 +184,33 @@ async function sendMessage(message) {
   } catch (e) {
     sending = false;
     UI.showToast('Something went wrong. Please try again.', { type: 'error' });
-    startListening();
+    showInput();
   }
 }
 
 async function handleResponse(data) {
   UI.showAiMessage(data.message);
-  UI.hideTranscript();
   UI.setOrbState('speaking');
 
-  // In voice mode, start listening while AI speaks (duplex)
-  if (isVoiceMode && !data.isComplete) {
-    // Start listening in parallel with speaking
-    VoiceEngine.speak(data.message).then(function () {
-      // If no one interrupted, ensure we're in listening state
-      if (!sending && !VoiceEngine.getIsSpeaking()) {
-        UI.setOrbState('listening');
-      }
-    });
-    // Small delay then start listening for barge-in
-    setTimeout(function () {
-      if (!data.isComplete && !sending) {
-        currentTranscript = '';
-        VoiceEngine.startListening(onInterim, onFinal, onSttError);
-        UI.showVoiceControls();
-        UI.showToggleLink('Switch to typing');
-      }
-    }, 500);
+  await VoiceEngine.speak(data.message);
+
+  if (data.isComplete) {
+    UI.showScreen('screen-summary');
   } else {
-    await VoiceEngine.speak(data.message);
-    if (data.isComplete) {
-      UI.showScreen('screen-summary');
-    } else {
-      startListening();
-    }
+    showInput();
   }
 }
 
 function toggleInputMode(e) {
   e.preventDefault();
-  clearAutoSend();
   if (isVoiceMode) {
     isVoiceMode = false;
-    VoiceEngine.stopListening();
+    if (isRecording) {
+      isRecording = false;
+      VoiceEngine.stopListening();
+    }
     VoiceEngine.stopSpeaking();
-    UI.hideVoiceControls();
-    UI.hideReviewControls();
+    UI.hidePTT();
     UI.hideTranscript();
     UI.showTextInput();
     UI.showToggleLink('Switch to voice');
@@ -257,7 +219,7 @@ function toggleInputMode(e) {
     isVoiceMode = true;
     pendingText = document.getElementById('text-input').value.trim();
     UI.hideTextInput();
-    startListening();
+    showInput();
   }
 }
 
@@ -266,11 +228,12 @@ function downloadBrief() {
 }
 
 function startOver() {
-  clearAutoSend();
   sessionId = null;
-  currentTranscript = '';
+  segments = [];
+  currentInterim = '';
   pendingText = '';
   sending = false;
+  isRecording = false;
   VoiceEngine.stopListening();
   VoiceEngine.stopSpeaking();
   UI.showScreen('screen-welcome');

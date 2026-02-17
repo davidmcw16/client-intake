@@ -18,27 +18,28 @@
 
   <!-- Screen 2: Conversation -->
   <div id="screen-conversation" class="screen">
-    <div class="container">
-      <div id="voice-orb" class="orb orb-idle">
-        <span id="orb-icon"></span>
+    <div class="conversation-layout">
+      <div class="conversation-top">
+        <div id="voice-orb" class="orb orb-idle">
+          <span id="orb-icon"></span>
+        </div>
+        <p id="orb-label" class="orb-label"></p>
+        <div id="ai-message" class="ai-message"></div>
       </div>
-      <p id="orb-label" class="orb-label"></p>
-      <div id="ai-message" class="ai-message"></div>
-      <div id="transcript-area" class="transcript-area hidden">
-        <p id="transcript-text"></p>
+      <div class="conversation-bottom">
+        <div id="transcript-area" class="transcript-area hidden">
+          <p id="transcript-text"></p>
+        </div>
+        <button id="btn-ptt" class="btn-ptt hidden">
+          <span id="ptt-icon">&#127908;</span>
+        </button>
+        <p id="ptt-label" class="ptt-label hidden">Tap to speak</p>
+        <div id="text-input-area" class="text-input-area hidden">
+          <textarea id="text-input" placeholder="Type your answer..."></textarea>
+          <button id="btn-send-text" class="btn-primary">Send</button>
+        </div>
+        <a id="toggle-input-mode" class="toggle-link hidden" href="#">Switch to typing</a>
       </div>
-      <div id="voice-controls" class="controls hidden">
-        <button id="btn-done-speaking" class="btn-secondary">Done Speaking</button>
-      </div>
-      <div id="review-controls" class="controls hidden">
-        <button id="btn-try-again" class="btn-ghost">Try Again</button>
-        <button id="btn-send" class="btn-primary">Send</button>
-      </div>
-      <div id="text-input-area" class="text-input-area hidden">
-        <textarea id="text-input" placeholder="Type your answer..."></textarea>
-        <button id="btn-send-text" class="btn-primary">Send</button>
-      </div>
-      <a id="toggle-input-mode" class="toggle-link hidden" href="#">Switch to typing</a>
     </div>
   </div>
 
