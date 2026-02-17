@@ -64,9 +64,24 @@ h2 {
   opacity: 0.6;
 }
 
-/* Widget container */
+/* Widget container — center the orb */
 #widget-container {
-  margin: 24px 0;
+  margin: 40px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Override the widget's default fixed positioning */
+elevenlabs-convai {
+  position: relative !important;
+  bottom: auto !important;
+  right: auto !important;
+  left: auto !important;
+  top: auto !important;
+  width: 120px !important;
+  height: 120px !important;
+  display: block !important;
 }
 
 /* Download section */
