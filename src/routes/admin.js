@@ -32,7 +32,8 @@ router.get('/sessions', requireAdmin, async (req, res) => {
         created_at: s.created_at,
         completed_at: s.completed_at,
         turn_count: s.turn_count,
-        status
+        status,
+        has_prp: !!s.prp_markdown
       };
     })
   });
@@ -58,6 +59,20 @@ router.get('/sessions/:id/download', requireAdmin, async (req, res) => {
   res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="intake-${session.client_name || 'client'}-${date}.md"`);
   res.send(session.markdown);
+});
+
+router.get('/sessions/:id/download-prp', requireAdmin, async (req, res) => {
+  const session = await getSession(req.params.id);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  if (!session.prp_markdown) {
+    return res.status(400).json({ error: 'No Developer PRP generated' });
+  }
+  const date = new Date(session.completed_at || Date.now()).toISOString().split('T')[0];
+  res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="prp-${session.client_name || 'client'}-${date}.md"`);
+  res.send(session.prp_markdown);
 });
 
 module.exports = router;

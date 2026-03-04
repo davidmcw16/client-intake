@@ -4,7 +4,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const db = require('../services/db');
 const llm = require('../services/llm');
-const { PRP_SYNTHESIS_PROMPT } = require('../prompts/system-prompt');
+const { PRP_SYNTHESIS_PROMPT, PRP_DEVELOPER_PROMPT } = require('../prompts/system-prompt');
 
 function verifySignature(req) {
   const secret = process.env.ELEVENLABS_WEBHOOK_SECRET;
@@ -68,14 +68,24 @@ router.post('/', async (req, res) => {
       .map(m => `${m.role === 'user' ? 'Client' : 'Interviewer'}: ${m.content}`)
       .join('\n\n');
 
-    // Generate PRP from transcript
-    let markdown = null;
-    try {
-      markdown = await llm.generatePRP(PRP_SYNTHESIS_PROMPT, [
+    // Generate both outputs in parallel
+    const [briefResult, prpResult] = await Promise.allSettled([
+      llm.generatePRP(PRP_SYNTHESIS_PROMPT, [
         { role: 'user', content: transcriptText }
-      ]);
-    } catch (err) {
-      console.error('PRP generation failed:', err.message);
+      ]),
+      llm.generateDevPRP(PRP_DEVELOPER_PROMPT, [
+        { role: 'user', content: transcriptText }
+      ])
+    ]);
+
+    const markdown = briefResult.status === 'fulfilled' ? briefResult.value : null;
+    const prpMarkdown = prpResult.status === 'fulfilled' ? prpResult.value : null;
+
+    if (briefResult.status === 'rejected') {
+      console.error('Client brief generation failed:', briefResult.reason.message);
+    }
+    if (prpResult.status === 'rejected') {
+      console.error('Dev PRP generation failed:', prpResult.reason.message);
     }
 
     // Update session with all data
@@ -85,7 +95,8 @@ router.post('/', async (req, res) => {
       client_name: clientName,
       is_complete: true,
       completed_at: new Date().toISOString(),
-      markdown: markdown
+      markdown: markdown,
+      prp_markdown: prpMarkdown
     });
 
     console.log(`Webhook: Session ${sessionId} saved (${userTurns} turns, client: ${clientName})`);

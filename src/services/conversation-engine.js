@@ -1,6 +1,6 @@
 const llm = require('./llm');
 const sessionManager = require('./session-manager');
-const { INTERVIEWER_PROMPT, PRP_SYNTHESIS_PROMPT } = require('../prompts/system-prompt');
+const { INTERVIEWER_PROMPT, PRP_SYNTHESIS_PROMPT, PRP_DEVELOPER_PROMPT } = require('../prompts/system-prompt');
 
 function extractClientName(messages) {
   const userMessages = messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
@@ -62,10 +62,28 @@ async function processMessage(session, userMessage) {
   }
 
   if (response.isComplete) {
-    const prpMarkdown = await generatePRPFromSession({ ...session, messages });
+    const transcript = messages
+      .map(m => `${m.role === 'user' ? 'Client' : 'Interviewer'}: ${m.content}`)
+      .join('\n\n');
+
+    const transcriptMessages = [{ role: 'user', content: transcript }];
+
+    const [briefResult, prpResult] = await Promise.allSettled([
+      llm.generatePRP(PRP_SYNTHESIS_PROMPT, transcriptMessages),
+      llm.generateDevPRP(PRP_DEVELOPER_PROMPT, transcriptMessages)
+    ]);
+
     updates.is_complete = true;
     updates.completed_at = new Date().toISOString();
-    updates.markdown = prpMarkdown;
+    updates.markdown = briefResult.status === 'fulfilled' ? briefResult.value : null;
+    updates.prp_markdown = prpResult.status === 'fulfilled' ? prpResult.value : null;
+
+    if (briefResult.status === 'rejected') {
+      console.error('Client brief generation failed:', briefResult.reason.message);
+    }
+    if (prpResult.status === 'rejected') {
+      console.error('Dev PRP generation failed:', prpResult.reason.message);
+    }
   }
 
   await sessionManager.updateSession(session.id, updates);

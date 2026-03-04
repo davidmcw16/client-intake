@@ -14,9 +14,15 @@ async function initDB() {
       is_complete BOOLEAN DEFAULT false,
       messages JSONB DEFAULT '[]'::jsonb,
       markdown TEXT,
+      prp_markdown TEXT,
       client_name TEXT,
       turn_count INTEGER DEFAULT 0
     )
+  `);
+
+  // Migration for existing tables
+  await pool.query(`
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS prp_markdown TEXT
   `);
 }
 

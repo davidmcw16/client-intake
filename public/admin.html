@@ -135,6 +135,12 @@
       color: #fff;
     }
 
+    .btn-sm--prp {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
     .btn-sm:active { transform: scale(0.97); }
 
     .status-badge {
@@ -331,7 +337,10 @@
         const date = new Date(s.completed_at || s.created_at).toLocaleDateString();
         const statusClass = s.status === 'Complete' ? 'complete' : s.status === 'Abandoned' ? 'abandoned' : 'started';
         const downloadBtn = s.status === 'Complete'
-          ? `<button class="btn-sm btn-sm--download" data-dl="${s.id}">Download</button>`
+          ? `<button class="btn-sm btn-sm--download" data-dl="${s.id}">Brief</button>`
+          : '';
+        const prpBtn = (s.status === 'Complete' && s.has_prp)
+          ? `<button class="btn-sm btn-sm--prp" data-prp-dl="${s.id}">PRP</button>`
           : '';
         tr.innerHTML = `
           <td>${escapeHtml(s.client_name || 'Unknown')}</td>
@@ -342,6 +351,7 @@
             <div class="actions-cell">
               <button class="btn-sm btn-sm--view" data-id="${s.id}">View</button>
               ${downloadBtn}
+              ${prpBtn}
             </div>
           </td>
         `;
@@ -355,6 +365,12 @@
       sessionsBody.querySelectorAll('[data-dl]').forEach(btn => {
         btn.addEventListener('click', () => {
           window.location.href = `/api/admin/sessions/${btn.dataset.dl}/download`;
+        });
+      });
+
+      sessionsBody.querySelectorAll('[data-prp-dl]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.location.href = `/api/admin/sessions/${btn.dataset.prpDl}/download-prp`;
         });
       });
     }
@@ -390,8 +406,13 @@
         });
 
         if (session.markdown) {
-          html += '<h3 style="margin-top:24px;">Generated PRP</h3>';
+          html += '<h3 style="margin-top:24px;">Generated Brief</h3>';
           html += `<div class="prp-preview">${escapeHtml(session.markdown)}</div>`;
+        }
+
+        if (session.prp_markdown) {
+          html += '<h3 style="margin-top:24px;">Generated Developer PRP</h3>';
+          html += `<div class="prp-preview">${escapeHtml(session.prp_markdown)}</div>`;
         }
 
         html += '</div>';
