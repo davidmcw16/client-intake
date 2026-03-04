@@ -26381,36 +26381,37 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       this.time = 0;
       this.animFrame = null;
       this.dpr = window.devicePixelRatio || 1;
-      this.lineCount = 14;
+      this.lineCount = 8;
       this.lines = [];
       for (let i = 0; i < this.lineCount; i++) {
         this.lines.push({
-          // Vertical position (spread across screen)
-          yBase: i / (this.lineCount - 1) * 0.8 + 0.1,
-          // 10%-90% of height
-          // Unique wave parameters per line
-          freq1: 1.5 + Math.random() * 1.5,
-          // primary wave frequency
-          freq2: 2.5 + Math.random() * 2,
+          // Vertical position (spread across screen with more spacing)
+          yBase: i / (this.lineCount - 1) * 0.7 + 0.15,
+          // 15%-85% of height
+          // Unique wave parameters per line — bigger, slower, more dramatic
+          freq1: 1 + Math.random() * 1,
+          // primary wave frequency (lower = wider curves)
+          freq2: 1.8 + Math.random() * 1.5,
           // secondary
-          freq3: 0.8 + Math.random() * 0.8,
+          freq3: 0.5 + Math.random() * 0.6,
           // slow undulation
-          amp1: 0.06 + Math.random() * 0.06,
-          // amplitudes as % of height
-          amp2: 0.025 + Math.random() * 0.03,
-          amp3: 0.04 + Math.random() * 0.04,
-          speed1: 0.15 + Math.random() * 0.2,
-          // speeds
-          speed2: -(0.1 + Math.random() * 0.15),
+          amp1: 0.08 + Math.random() * 0.08,
+          // amplitudes as % of height (bigger)
+          amp2: 0.035 + Math.random() * 0.04,
+          amp3: 0.05 + Math.random() * 0.05,
+          speed1: 0.12 + Math.random() * 0.15,
+          // speeds (slightly slower)
+          speed2: -(0.08 + Math.random() * 0.12),
           // counter-direction
-          speed3: 0.05 + Math.random() * 0.1,
+          speed3: 0.04 + Math.random() * 0.08,
           phase: Math.random() * Math.PI * 2,
           // start phase offset
           // Visual
           hue: 235 + Math.random() * 40,
           // blue-purple range
-          alpha: 0.08 + Math.random() * 0.14,
-          width: 1 + Math.random() * 1
+          alpha: 0.1 + Math.random() * 0.15,
+          // slightly brighter since fewer lines
+          width: 1.2 + Math.random() * 1
         });
       }
       this._resize();
@@ -26448,7 +26449,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       const ctx = this.ctx;
       const w2 = this.width;
       const h3 = this.height;
-      ctx.fillStyle = "rgba(6, 6, 12, 0.08)";
+      ctx.fillStyle = "rgba(6, 6, 12, 0.06)";
       ctx.fillRect(0, 0, w2, h3);
       const segmentCount = 120;
       const mx = this.mouse.x / w2;
