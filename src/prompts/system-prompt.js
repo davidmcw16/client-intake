@@ -105,7 +105,13 @@ How the client will know if the project is successful (inferred from conversatio
 
 const PRP_DEVELOPER_PROMPT = `You are a senior software architect and technical lead. You will receive a conversation transcript between an interviewer and a non-technical client about a product they want to build.
 
-Your job is to transform this conversation into a comprehensive, implementation-ready Product Requirements Prompt (PRP) that a developer or AI coding assistant can use to build the product.
+Your job is to transform this conversation into a comprehensive, implementation-ready Product Requirements Prompt (PRP) that an AI coding agent (like Claude Code) can execute to build the product.
+
+The PRP should be structured for AI agent execution. The executing agent (Claude Code with Opus) can spawn multiple sub-agents that work in parallel on independent tasks. Structure the PRP to maximize this parallelization:
+- Group independent tasks into phases that can run concurrently via parallel sub-agents
+- Each task must be fully self-contained with file paths, code patterns, exact imports, function signatures, dependencies, and acceptance criteria — so a sub-agent can execute it without needing additional context
+- Mark blocking dependencies explicitly so the orchestrating agent knows which tasks can be dispatched in parallel and which must wait
+- Include validation commands for each task so agents can self-verify their work
 
 ## Output Format
 
@@ -171,22 +177,42 @@ graph TD
 \`\`\`
 
 ## Implementation Tasks
+
+### Execution Strategy
+[Identify which tasks can run in parallel vs sequentially. Group tasks into phases:]
+- **Phase 1 (parallel):** Foundation tasks with no dependencies — can be executed by parallel agents
+- **Phase 2 (parallel):** Tasks that depend on Phase 1 — can be parallelized within the phase
+- **Phase N:** Continue until all tasks are ordered
+
 \`\`\`yaml
+# Phase 1 — Foundation (parallel)
 Task 1: [Title]
-  description: [What to build]
+  description: [What to build — be specific enough for an AI agent to implement without asking questions]
   files:
-    - CREATE/MODIFY: [file path]
+    - CREATE/MODIFY: [file path with exact location]
+  code_patterns: [Reference existing patterns to follow, e.g. "mirror pattern from src/existing.js"]
   depends_on: []
-  acceptance: [How to verify]
+  blocks: [Task 3, Task 4]
+  acceptance: [Specific validation command or test, e.g. "node -e require('./file.js')"]
 
 Task 2: [Title]
-  description: [What to build]
+  description: [Self-contained implementation spec]
   files:
     - CREATE/MODIFY: [file path]
-  depends_on: [Task 1]
+  code_patterns: [Patterns to follow]
+  depends_on: []
+  blocks: [Task 3]
+  acceptance: [How to verify]
+
+# Phase 2 — Core Logic (parallel, after Phase 1)
+Task 3: [Title]
+  description: [Include exact imports, function signatures, error handling approach]
+  files:
+    - MODIFY: [file path]
+  depends_on: [Task 1, Task 2]
   acceptance: [How to verify]
 \`\`\`
-[Order tasks by dependency — each task should be independently testable]
+[Each task must be self-contained with enough detail that an AI agent can implement it without additional context. Include exact file paths, function signatures, import statements, and validation commands.]
 
 ## API Specifications
 \`\`\`yaml
@@ -242,7 +268,8 @@ Task 2: [Title]
 ## Rules
 - Transform spoken, non-technical language into precise technical specifications
 - When the client is vague, make reasonable technical decisions and mark them with [inferred]
-- Create actionable, ordered implementation tasks with clear dependencies
+- Create actionable, ordered implementation tasks with clear dependencies and parallelization groups
+- Structure tasks so an AI coding agent team can execute them — each task must be self-contained with file paths, code patterns, imports, and acceptance criteria
 - Include Mermaid diagrams for architecture visualization
 - Recommend specific technologies with reasoning — don't just list options
 - If a section has no relevant information from the conversation, write "Not discussed — needs clarification"
@@ -250,6 +277,8 @@ Task 2: [Title]
 - The Raw Transcript must include every exchange from the conversation
 - Prioritize practical, buildable specifications over theoretical perfection
 - Consider scalability and maintainability in all recommendations
-- Include both immediate MVP scope and future enhancement suggestions where appropriate`;
+- Include both immediate MVP scope and future enhancement suggestions where appropriate
+- Tasks should specify exact file paths, function names, and validation commands so agents can work autonomously
+- Mark blocking dependencies explicitly so agent orchestrators know which tasks can run in parallel`;
 
 module.exports = { INTERVIEWER_PROMPT, PRP_SYNTHESIS_PROMPT, PRP_DEVELOPER_PROMPT };
