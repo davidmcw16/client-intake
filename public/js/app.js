@@ -1,7 +1,9 @@
 import { Conversation } from '@elevenlabs/client';
 
-// Import existing modules (they'll be bundled)
-// OrbVisualizer and UI are loaded as globals from their respective files
+// Import existing modules so esbuild bundles them (they set window globals)
+import './orb-visualizer.js';
+import './ui.js';
+import './voice-engine.js';
 
 (function () {
   const ui = new UI();

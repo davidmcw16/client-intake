@@ -25838,6 +25838,520 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     }
   };
 
+  // public/js/orb-visualizer.js
+  var OrbVisualizer2 = class {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext("2d");
+      this.state = "idle";
+      this.animFrame = null;
+      this.analyser = null;
+      this.audioCtx = null;
+      this.freqData = null;
+      this._sdkFreqData = null;
+      this._simulated = false;
+      this._simPhase = 0;
+      this._t = 0;
+      this._resize();
+      this._animate();
+    }
+    _resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const size = 200;
+      this.canvas.width = size * dpr;
+      this.canvas.height = size * dpr;
+      this.ctx.scale(dpr, dpr);
+      this.cx = 100;
+      this.cy = 100;
+    }
+    /** Connect to an Audio element for real audio-reactive animation */
+    connectAudio(audioElement) {
+      try {
+        if (!this.audioCtx) {
+          this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const source = this.audioCtx.createMediaElementSource(audioElement);
+        this.analyser = this.audioCtx.createAnalyser();
+        this.analyser.fftSize = 256;
+        this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+        source.connect(this.analyser);
+        this.analyser.connect(this.audioCtx.destination);
+        this._simulated = false;
+      } catch (e2) {
+        console.warn("OrbVisualizer: could not connect audio, using simulated", e2);
+        this._simulated = true;
+      }
+    }
+    /** Disconnect analyser (call when audio ends) */
+    disconnectAudio() {
+      this.analyser = null;
+      this.freqData = null;
+    }
+    setState(state) {
+      this.state = state;
+      if (state !== "speaking") {
+        this._simulated = false;
+      }
+    }
+    startSimulatedSpeaking() {
+      this._simulated = true;
+      this._simPhase = 0;
+    }
+    stopSimulatedSpeaking() {
+      this._simulated = false;
+    }
+    /** Accept frequency data from ElevenLabs SDK */
+    setFrequencyData(data) {
+      this._sdkFreqData = data;
+    }
+    /** Get audio level 0-1 from analyser or simulation */
+    _getLevel() {
+      if (this._sdkFreqData && this._sdkFreqData.length > 0) {
+        let sum = 0;
+        for (let i = 0; i < this._sdkFreqData.length; i++) {
+          sum += this._sdkFreqData[i];
+        }
+        const level = sum / (this._sdkFreqData.length * 255);
+        this._sdkFreqData = null;
+        return level;
+      }
+      if (this.analyser && this.freqData) {
+        this.analyser.getByteFrequencyData(this.freqData);
+        let sum = 0;
+        for (let i = 0; i < this.freqData.length; i++) {
+          sum += this.freqData[i];
+        }
+        return sum / (this.freqData.length * 255);
+      }
+      if (this._simulated) {
+        this._simPhase += 0.08;
+        return 0.3 + 0.3 * Math.sin(this._simPhase) + 0.1 * Math.sin(this._simPhase * 2.7);
+      }
+      return 0;
+    }
+    _animate() {
+      this._t += 0.016;
+      const ctx = this.ctx;
+      const cx = this.cx;
+      const cy = this.cy;
+      ctx.clearRect(0, 0, 200, 200);
+      switch (this.state) {
+        case "speaking":
+          this._drawSpeaking(ctx, cx, cy);
+          break;
+        case "listening":
+          this._drawListening(ctx, cx, cy);
+          break;
+        case "thinking":
+          this._drawThinking(ctx, cx, cy);
+          break;
+        default:
+          this._drawIdle(ctx, cx, cy);
+      }
+      this.animFrame = requestAnimationFrame(() => this._animate());
+    }
+    _drawSpeaking(ctx, cx, cy) {
+      const level = this._getLevel();
+      const baseR = 36;
+      const r3 = baseR + level * 14;
+      for (let i = 3; i >= 1; i--) {
+        const rippleR = r3 + i * 8 + level * i * 4;
+        const alpha = 0.12 - i * 0.03;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(99, 102, 241, ${alpha})`;
+        ctx.fill();
+      }
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r3);
+      grad.addColorStop(0, "rgba(129, 130, 255, 1)");
+      grad.addColorStop(1, "rgba(99, 102, 241, 1)");
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.shadowColor = "rgba(99, 102, 241, 0.5)";
+      ctx.shadowBlur = 20 + level * 20;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(99, 102, 241, 0.01)";
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+    }
+    _drawListening(ctx, cx, cy) {
+      const pulse = 1 + 0.06 * Math.sin(this._t * 4);
+      const r3 = 36 * pulse;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3 + 8, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(239, 68, 68, 0.1)";
+      ctx.fill();
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r3);
+      grad.addColorStop(0, "rgba(255, 100, 100, 1)");
+      grad.addColorStop(1, "rgba(239, 68, 68, 1)");
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.shadowColor = "rgba(239, 68, 68, 0.4)";
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(239, 68, 68, 0.01)";
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+    }
+    _drawThinking(ctx, cx, cy) {
+      const pulse = 1 + 0.04 * Math.sin(this._t * 2);
+      const r3 = 36 * pulse;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.8)";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3 - 1, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(28, 28, 46, 0.9)";
+      ctx.fill();
+      const startAngle = this._t * 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, startAngle, startAngle + Math.PI * 0.6);
+      ctx.strokeStyle = "rgba(99, 102, 241, 1)";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.lineCap = "butt";
+      ctx.shadowColor = "rgba(99, 102, 241, 0.3)";
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.01)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+    }
+    _drawIdle(ctx, cx, cy) {
+      const r3 = 36;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(28, 28, 46, 1)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r3, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    destroy() {
+      if (this.animFrame) {
+        cancelAnimationFrame(this.animFrame);
+      }
+    }
+  };
+  window.OrbVisualizer = OrbVisualizer2;
+
+  // public/js/ui.js
+  var UI2 = class {
+    constructor() {
+      this.screens = {
+        welcome: document.getElementById("screen-welcome"),
+        question: document.getElementById("screen-question"),
+        summary: document.getElementById("screen-summary")
+      };
+      this.chatContainer = document.getElementById("chat-container");
+      this.voiceOrb = document.getElementById("voice-orb");
+      this.voiceLabel = document.getElementById("voice-label");
+      this.visualizer = new OrbVisualizer(document.getElementById("orb-canvas"));
+      this.transcriptArea = document.getElementById("transcript-area");
+      this.transcriptText = document.getElementById("transcript-text");
+      this.textFallback = document.getElementById("text-fallback");
+      this.textInput = document.getElementById("text-input");
+      this.actionsListening = document.getElementById("actions-listening");
+      this.actionsConfirm = document.getElementById("actions-confirm");
+      this.actionsText = document.getElementById("actions-text");
+      this.modeToggle = document.getElementById("btn-mode-toggle");
+      this.summaryContainer = document.getElementById("summary-container");
+      this.toastEl = document.getElementById("toast");
+      this.toastTimeout = null;
+    }
+    /** Switch to a named screen */
+    showScreen(name) {
+      Object.values(this.screens).forEach((s2) => s2.classList.remove("active"));
+      this.screens[name].classList.add("active");
+    }
+    /** Add a message bubble to the chat */
+    addChatMessage(role, content) {
+      const bubble = document.createElement("div");
+      bubble.className = `chat-message chat-message--${role}`;
+      bubble.textContent = content;
+      this.chatContainer.appendChild(bubble);
+      this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    }
+    /** Set orb to "thinking" state (waiting for LLM) */
+    setOrbThinking() {
+      this.voiceOrb.style.display = "flex";
+      this.voiceOrb.className = "voice-orb";
+      this.visualizer.setState("thinking");
+      this.voiceLabel.textContent = "Thinking...";
+      this._hideAllActions();
+      this.transcriptArea.style.display = "none";
+      this.textFallback.style.display = "none";
+    }
+    /** Clear all chat messages */
+    clearChat() {
+      this.chatContainer.innerHTML = "";
+    }
+    /** Voice orb states */
+    setOrbSpeaking() {
+      this.voiceOrb.className = "voice-orb";
+      this.visualizer.setState("speaking");
+      this.voiceLabel.textContent = "Speaking...";
+      this._hideAllActions();
+      this.transcriptArea.style.display = "none";
+      this.textFallback.style.display = "none";
+    }
+    setOrbListening() {
+      this.voiceOrb.className = "voice-orb";
+      this.visualizer.setState("listening");
+      this.voiceLabel.textContent = "Listening...";
+      this.transcriptArea.style.display = "block";
+      this.transcriptText.textContent = "";
+      this.transcriptText.className = "transcript-text";
+      this._hideAllActions();
+      this.actionsListening.style.display = "flex";
+      this.modeToggle.style.display = "block";
+      this.modeToggle.textContent = "Switch to typing";
+    }
+    setOrbIdle() {
+      this.voiceOrb.className = "voice-orb";
+      this.visualizer.setState("idle");
+      this.voiceLabel.textContent = "";
+      this._hideAllActions();
+    }
+    /** Update live transcript */
+    setTranscript(text, isInterim) {
+      this.transcriptText.textContent = text || "Listening...";
+      this.transcriptText.className = isInterim ? "transcript-text interim" : "transcript-text";
+    }
+    /** Show confirm buttons after transcription */
+    showConfirm(transcript) {
+      this.setOrbIdle();
+      this.voiceLabel.textContent = "Review your answer";
+      this.transcriptArea.style.display = "block";
+      this.transcriptText.textContent = transcript;
+      this.transcriptText.className = "transcript-text";
+      this._hideAllActions();
+      this.actionsConfirm.style.display = "flex";
+      this.modeToggle.style.display = "none";
+    }
+    /** Switch to text input mode */
+    showTextMode() {
+      this.setOrbIdle();
+      this.voiceOrb.style.display = "none";
+      this.voiceLabel.textContent = "";
+      this.transcriptArea.style.display = "none";
+      this._hideAllActions();
+      this.textFallback.style.display = "block";
+      this.textInput.value = "";
+      this.textInput.focus();
+      this.actionsText.style.display = "flex";
+      this.modeToggle.style.display = "block";
+      this.modeToggle.textContent = "Switch to voice";
+    }
+    /** Switch back to voice mode */
+    showVoiceMode() {
+      this.voiceOrb.style.display = "flex";
+      this.textFallback.style.display = "none";
+      this._hideAllActions();
+      this.modeToggle.style.display = "block";
+      this.modeToggle.textContent = "Switch to typing";
+    }
+    /** Build summary screen */
+    buildSummary() {
+      this.summaryContainer.innerHTML = '<p style="color: var(--text-dim); margin-bottom: 16px;">Your project brief has been generated and is ready to download.</p>';
+    }
+    /** Show a toast notification */
+    toast(message, duration = 3e3) {
+      this.toastEl.textContent = message;
+      this.toastEl.classList.add("show");
+      clearTimeout(this.toastTimeout);
+      this.toastTimeout = setTimeout(() => {
+        this.toastEl.classList.remove("show");
+      }, duration);
+    }
+    _hideAllActions() {
+      this.actionsListening.style.display = "none";
+      this.actionsConfirm.style.display = "none";
+      this.actionsText.style.display = "none";
+    }
+  };
+  window.UI = UI2;
+
+  // public/js/voice-engine.js
+  var VoiceEngine2 = class {
+    constructor() {
+      this.audioContext = null;
+      this.recognition = null;
+      this.isListening = false;
+      this.currentAudio = null;
+      this._silenceTimer = null;
+      this.onAudioCreated = null;
+      this.onBrowserTTSStart = null;
+      this.onBrowserTTSEnd = null;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      this.sttSupported = !!SpeechRecognition;
+      if (this.sttSupported) {
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = true;
+        this.recognition.interimResults = true;
+        this.recognition.lang = "en-US";
+        this.recognition.maxAlternatives = 1;
+      }
+      this.browserTtsSupported = "speechSynthesis" in window;
+    }
+    /**
+     * Speak text using 11Labs API (via server proxy), falling back to browser TTS.
+     * Returns a Promise that resolves when speech finishes.
+     */
+    async speak(text) {
+      try {
+        const response = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        if (data.fallback || !data.audio) {
+          return this._browserSpeak(text);
+        }
+        return this._playBase64Audio(data.audio);
+      } catch (err) {
+        console.warn("11Labs TTS failed, using browser fallback:", err);
+        return this._browserSpeak(text);
+      }
+    }
+    /**
+     * Play base64-encoded audio and return a Promise that resolves when done.
+     */
+    _playBase64Audio(base64) {
+      return new Promise((resolve, reject) => {
+        const audio = new Audio(`data:audio/mpeg;base64,${base64}`);
+        this.currentAudio = audio;
+        if (this.onAudioCreated) {
+          this.onAudioCreated(audio);
+        }
+        audio.onended = () => {
+          this.currentAudio = null;
+          resolve();
+        };
+        audio.onerror = (err) => {
+          this.currentAudio = null;
+          reject(err);
+        };
+        audio.play().catch(reject);
+      });
+    }
+    /**
+     * Browser TTS fallback.
+     */
+    _browserSpeak(text) {
+      return new Promise((resolve) => {
+        if (!this.browserTtsSupported) {
+          setTimeout(resolve, 1e3);
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        utterance.pitch = 1;
+        if (this.onBrowserTTSStart) this.onBrowserTTSStart();
+        utterance.onend = () => {
+          if (this.onBrowserTTSEnd) this.onBrowserTTSEnd();
+          resolve();
+        };
+        utterance.onerror = () => {
+          if (this.onBrowserTTSEnd) this.onBrowserTTSEnd();
+          resolve();
+        };
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+    /**
+     * Stop any currently playing audio.
+     */
+    stopSpeaking() {
+      if (this.currentAudio) {
+        this.currentAudio.pause();
+        this.currentAudio = null;
+      }
+      if (this.browserTtsSupported) {
+        window.speechSynthesis.cancel();
+      }
+    }
+    /**
+     * Start listening via Web Speech API.
+     * Calls onInterim(text) for partial results, onFinal(text) when recognition ends.
+     * Returns false if STT not supported.
+     */
+    startListening({ onInterim, onFinal, onError }) {
+      if (!this.sttSupported) return false;
+      let finalTranscript = "";
+      let interimTranscript = "";
+      this.recognition.onresult = (event) => {
+        interimTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + " ";
+          } else {
+            interimTranscript = transcript;
+          }
+        }
+        if (onInterim) {
+          onInterim(finalTranscript + interimTranscript, !!interimTranscript);
+        }
+        clearTimeout(this._silenceTimer);
+        if (finalTranscript.trim()) {
+          this._silenceTimer = setTimeout(() => {
+            if (this.isListening) {
+              this.recognition.stop();
+            }
+          }, 2e3);
+        }
+      };
+      this.recognition.onerror = (event) => {
+        console.warn("STT error:", event.error);
+        if (onError) onError(event.error);
+      };
+      this.recognition.onend = () => {
+        this.isListening = false;
+        if (onFinal) onFinal(finalTranscript.trim());
+      };
+      try {
+        finalTranscript = "";
+        interimTranscript = "";
+        this.recognition.start();
+        this.isListening = true;
+        return true;
+      } catch (err) {
+        console.warn("Failed to start STT:", err);
+        if (onError) onError("start-failed");
+        return false;
+      }
+    }
+    /**
+     * Stop listening and trigger onFinal.
+     */
+    stopListening() {
+      clearTimeout(this._silenceTimer);
+      if (this.recognition && this.isListening) {
+        this.recognition.stop();
+        this.isListening = false;
+      }
+    }
+  };
+  window.VoiceEngine = VoiceEngine2;
+
   // public/js/app.js
   (function() {
     const ui = new UI();
