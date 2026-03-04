@@ -3,24 +3,36 @@
     "conversation_config": {
         "asr": {
             "quality": "high",
-            "provider": "elevenlabs",
+            "provider": "scribe_realtime",
             "user_input_audio_format": "pcm_16000",
             "keywords": []
         },
         "turn": {
             "turn_timeout": 7,
-            "silence_end_call_timeout": -1,
-            "mode": "turn"
+            "silence_end_call_timeout": 30,
+            "soft_timeout_config": {
+                "timeout_seconds": -1,
+                "message": "Hhmmmm...yeah.",
+                "use_llm_generated_message": false
+            },
+            "mode": "turn",
+            "turn_eagerness": "normal",
+            "spelling_patience": "auto",
+            "speculative_turn": true,
+            "turn_model": "turn_v2"
         },
         "tts": {
-            "model_id": "eleven_turbo_v2",
+            "model_id": "eleven_v3_conversational",
             "voice_id": "cjVigY5qzO86Huf0OWal",
             "supported_voices": [],
+            "expressive_mode": true,
+            "suggested_audio_tags": [],
             "agent_output_audio_format": "pcm_16000",
             "optimize_streaming_latency": 3,
             "stability": 0.5,
             "speed": 1,
             "similarity_boost": 0.75,
+            "text_normalisation_type": "system_prompt",
             "pronunciation_dictionary_locators": []
         },
         "conversation": {
@@ -29,21 +41,43 @@
             "client_events": [
                 "audio",
                 "interruption"
+            ],
+            "monitoring_enabled": false,
+            "monitoring_events": [
+                "user_transcript",
+                "agent_response",
+                "agent_response_correction"
             ]
         },
         "language_presets": {},
+        "vad": {
+            "background_voice_detection": false
+        },
         "agent": {
-            "first_message": "Hi there! I'm excited to learn about your project idea. Let's start simple \u2014 what do you want to build? Just describe the big idea in a couple of sentences.",
+            "first_message": "Hi there! I'm excited to learn about your project idea. Let's start simple — what do you want to build? Just describe the big idea in a couple of sentences.",
             "language": "en",
+            "hinglish_mode": false,
             "dynamic_variables": {
-                "dynamic_variable_placeholders": {}
+                "dynamicVariablePlaceholders": {}
             },
+            "disable_first_message_interruptions": false,
             "prompt": {
-                "prompt": "You are a friendly, warm product intake interviewer. Your job is to understand what a client wants to build through natural conversation. You are NOT technical \u2014 you speak in plain language.\n\n## Your Information Targets\nYou need to gather information across these 8 categories:\n1. Vision \u2014 What they want to build, the big idea, the name\n2. Users \u2014 Who will use it, what problem it solves\n3. Features \u2014 Core capabilities, must-haves\n4. Journey \u2014 Step-by-step user experience\n5. Design \u2014 Look, feel, vibe, colors, mood\n6. Integrations \u2014 External tools, apps, services needed\n7. Scale \u2014 Expected user count, growth expectations\n8. Constraints \u2014 Timeline, budget, limitations\n\n## Conversation Rules\n- Ask ONE question at a time\n- Start with a warm greeting and ask about their vision\n- When an answer is vague, dig deeper with a follow-up before moving on\n- Follow interesting threads \u2014 if they mention something exciting, explore it\n- You CAN suggest best practices\n- You CAN answer questions about what's possible or common approaches\n- Keep questions conversational and non-technical\n- Never use jargon \u2014 translate technical concepts into plain language\n- Acknowledge their answers warmly before asking the next question\n- Keep responses concise \u2014 1-3 sentences. You are being spoken aloud.\n\n## Completion Rules\n- You need reasonable coverage of at least 6 of the 8 categories\n- Maximum 20 turns \u2014 if you hit 20, wrap up gracefully\n- When complete, thank them warmly and tell them their project brief is being generated",
-                "llm": "claude-3-5-sonnet",
+                "prompt": "You are a friendly, warm product intake interviewer. Your job is to understand what a client wants to build through natural conversation. You are NOT technical — you speak in plain language.\n\n## Your Information Targets\nYou need to gather information across these 8 categories:\n1. Vision — What they want to build, the big idea, the name\n2. Users — Who will use it, what problem it solves\n3. Features — Core capabilities, must-haves\n4. Journey — Step-by-step user experience\n5. Design — Look, feel, vibe, colors, mood\n6. Integrations — External tools, apps, services needed\n7. Scale — Expected user count, growth expectations\n8. Constraints — Timeline, budget, limitations\n\n## Conversation Rules\n- Ask ONE question at a time\n- Start with a warm greeting and ask about their vision\n- When an answer is vague, dig deeper with a follow-up before moving on\n- Follow interesting threads — if they mention something exciting, explore it\n- You CAN suggest best practices\n- You CAN answer questions about what's possible or common approaches\n- Keep questions conversational and non-technical\n- Never use jargon — translate technical concepts into plain language\n- Acknowledge their answers warmly before asking the next question\n- Keep responses concise — 1-3 sentences. You are being spoken aloud.\n\n## Completion Rules\n- You need reasonable coverage of at least 6 of the 8 categories\n- Maximum 20 turns — if you hit 20, wrap up gracefully\n- When complete, thank them warmly, tell them their project brief is being generated, and then use the end_call tool to end the conversation\n- IMPORTANT: Always use end_call after your closing message — do not leave the conversation hanging",
+                "llm": "gpt-5.2",
+                "reasoning_effort": "none",
                 "temperature": 0.7,
                 "max_tokens": -1,
                 "tool_ids": [],
+                "built_in_tools": {
+                    "end_call": {
+                        "type": "system",
+                        "name": "end_call",
+                        "params": {
+                            "system_tool_type": "end_call"
+                        }
+                    }
+                },
+                "enable_parallel_tool_calls": false,
                 "mcp_server_ids": [],
                 "native_mcp_server_ids": [],
                 "knowledge_base": [],
@@ -53,18 +87,26 @@
                     "embedding_model": "e5_mistral_7b_instruct",
                     "max_vector_distance": 0.6,
                     "max_documents_length": 50000,
-                    "max_retrieved_rag_chunks_count": 20
+                    "max_retrieved_rag_chunks_count": 20,
+                    "num_candidates": null
                 },
-                "custom_llm": null
+                "backup_llm_config": {
+                    "preference": "default"
+                },
+                "cascade_timeout_seconds": 8,
+                "tools": [
+                    {
+                        "type": "system",
+                        "name": "end_call",
+                        "params": {
+                            "system_tool_type": "end_call"
+                        }
+                    }
+                ]
             }
         }
     },
     "platform_settings": {
-        "auth": {
-            "enable_auth": false,
-            "allowlist": [],
-            "shareable_token": null
-        },
         "evaluation": {
             "criteria": []
         },
@@ -74,10 +116,13 @@
             "expandable": "never",
             "avatar": {
                 "type": "orb",
-                "color_1": "#2792dc",
-                "color_2": "#9ce6e6"
+                "color1": "#2792dc",
+                "color2": "#9ce6e6"
             },
             "feedback_mode": "none",
+            "end_feedback": {
+                "type": "rating"
+            },
             "bg_color": "#ffffff",
             "text_color": "#000000",
             "btn_color": "#000000",
@@ -87,77 +132,51 @@
             "shareable_page_show_terms": true,
             "show_avatar_when_collapsed": false,
             "disable_banner": false,
+            "markdown_link_allowed_hosts": [],
+            "markdown_link_include_www": true,
+            "markdown_link_allow_http": true,
             "mic_muting_enabled": false,
             "transcript_enabled": false,
             "text_input_enabled": true,
+            "conversation_mode_toggle_enabled": false,
+            "default_expanded": false,
+            "always_expanded": false,
+            "dismissible": false,
+            "show_agent_status": false,
+            "show_conversation_id": true,
+            "strip_audio_tags": true,
+            "syntax_highlight_theme": null,
             "text_contents": {
-                "main_label": null,
-                "start_call": null,
-                "new_call": null,
-                "end_call": null,
-                "mute_microphone": null,
-                "change_language": null,
-                "collapse": null,
-                "expand": null,
-                "copied": null,
-                "accept_terms": null,
-                "dismiss_terms": null,
-                "listening_status": null,
-                "speaking_status": null,
-                "connecting_status": null,
-                "input_label": null,
-                "input_placeholder": null,
-                "user_ended_conversation": null,
-                "agent_ended_conversation": null,
-                "conversation_id": null,
-                "error_occurred": null,
-                "copy_id": null
+                "send_message": null,
+                "text_mode": null,
+                "voice_mode": null,
+                "switched_to_text_mode": null,
+                "switched_to_voice_mode": null,
+                "copy": null,
+                "download": null,
+                "wrap": null,
+                "agent_working": null,
+                "agent_done": null,
+                "agent_error": null
             },
+            "styles": {},
             "language_selector": false,
             "supports_text_only": true,
-            "language_presets": {},
-            "styles": {
-                "base": null,
-                "base_hover": null,
-                "base_active": null,
-                "base_border": null,
-                "base_subtle": null,
-                "base_primary": null,
-                "base_error": null,
-                "accent": null,
-                "accent_hover": null,
-                "accent_active": null,
-                "accent_border": null,
-                "accent_subtle": null,
-                "accent_primary": null,
-                "overlay_padding": null,
-                "button_radius": null,
-                "input_radius": null,
-                "bubble_radius": null,
-                "sheet_radius": null,
-                "compact_sheet_radius": null,
-                "dropdown_sheet_radius": null
-            },
-            "border_radius": null,
-            "btn_radius": null,
-            "action_text": null,
-            "start_call_text": null,
-            "end_call_text": null,
-            "expand_text": null,
-            "listening_text": null,
-            "speaking_text": null,
-            "shareable_page_text": null,
-            "terms_text": null,
-            "terms_html": null,
-            "terms_key": null,
-            "override_link": null,
-            "custom_avatar_path": null
+            "language_presets": {}
         },
         "data_collection": {},
         "overrides": {
             "conversation_config_override": {
+                "turn": {
+                    "soft_timeout_config": {
+                        "message": false
+                    }
+                },
                 "tts": {
-                    "voice_id": false
+                    "voice_id": false,
+                    "stability": false,
+                    "speed": false,
+                    "similarity_boost": false
                 },
                 "conversation": {
                     "text_only": true
@@ -166,41 +185,165 @@
                     "first_message": false,
                     "language": false,
                     "prompt": {
-                        "prompt": false
+                        "prompt": false,
+                        "llm": false,
+                        "native_mcp_server_ids": false
                     }
                 }
             },
             "custom_llm_extra_body": false,
             "enable_conversation_initiation_client_data_from_webhook": false
         },
+        "workspace_overrides": {
+            "webhooks": {
+                "events": [
+                    "transcript"
+                ],
+                "send_audio": false
+            }
+        },
+        "testing": {
+            "attached_tests": [],
+            "referenced_tests_ids": []
+        },
+        "archived": false,
+        "guardrails": {
+            "version": "1",
+            "focus": {
+                "is_enabled": false
+            },
+            "prompt_injection": {
+                "is_enabled": false
+            },
+            "content": {
+                "config": {
+                    "sexual": {
+                        "is_enabled": false,
+                        "threshold": 0.68
+                    },
+                    "violence": {
+                        "is_enabled": false,
+                        "threshold": 0.5
+                    },
+                    "harassment": {
+                        "is_enabled": false,
+                        "threshold": 0.44
+                    },
+                    "self_harm": {
+                        "is_enabled": false,
+                        "threshold": 0.49
+                    },
+                    "profanity": {
+                        "is_enabled": false,
+                        "threshold": 0.59
+                    },
+                    "religion_or_politics": {
+                        "is_enabled": false,
+                        "threshold": 0.29
+                    },
+                    "medical_and_legal_information": {
+                        "is_enabled": false,
+                        "threshold": 0.38
+                    }
+                }
+            },
+            "moderation": {
+                "config": {
+                    "sexual": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "violence": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "violence_graphic": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "harassment": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "harassment_threatening": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "hate": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "hate_threatening": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "self_harm_instructions": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "self_harm": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "self_harm_intent": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    },
+                    "sexual_minors": {
+                        "is_enabled": false,
+                        "threshold": 0.3
+                    }
+                }
+            },
+            "custom": {
+                "config": {
+                    "configs": []
+                }
+            }
+        },
+        "summary_language": null,
+        "auth": {
+            "enable_auth": false,
+            "allowlist": [],
+            "require_origin_header": false
+        },
         "call_limits": {
             "agent_concurrency_limit": -1,
             "daily_limit": 100000,
             "bursting_enabled": true
         },
+        "ban": null,
         "privacy": {
             "record_voice": true,
             "retention_days": -1,
             "delete_transcript_and_pii": false,
             "delete_audio": false,
             "apply_to_existing_conversations": false,
-            "zero_retention_mode": false
-        },
-        "workspace_overrides": {
-            "webhooks": {
-                "post_call_webhook_id": null
-            },
-            "conversation_initiation_client_data_webhook": null
+            "zero_retention_mode": false,
+            "conversation_history_redaction": {
+                "enabled": false,
+                "entities": []
+            }
         },
         "safety": {
             "is_blocked_ivc": false,
             "is_blocked_non_ivc": false,
             "ignore_safety_evaluation": false
-        },
-        "testing": {
-            "attached_tests": []
-        },
-        "ban": null
+        }
     },
-    "tags": []
+    "tags": [],
+    "workflow": {
+        "edges": {},
+        "nodes": {
+            "start_node": {
+                "type": "start",
+                "position": {
+                    "x": 0,
+                    "y": 0
+                },
+                "edge_order": []
+            }
+        },
+        "prevent_subagent_loops": false
+    }
 }

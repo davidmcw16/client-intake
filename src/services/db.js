@@ -20,9 +20,12 @@ async function initDB() {
     )
   `);
 
-  // Migration for existing tables
+  // Migrations for existing tables
   await pool.query(`
     ALTER TABLE sessions ADD COLUMN IF NOT EXISTS prp_markdown TEXT
+  `);
+  await pool.query(`
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS conversation_id TEXT
   `);
 }
 
@@ -53,6 +56,14 @@ async function updateSession(sessionId, updates) {
   return result.rows[0];
 }
 
+async function getSessionByConversationId(conversationId) {
+  const result = await pool.query(
+    'SELECT * FROM sessions WHERE conversation_id = $1',
+    [conversationId]
+  );
+  return result.rows[0] || null;
+}
+
 async function listCompletedSessions() {
   const result = await pool.query(
     'SELECT * FROM sessions WHERE is_complete = true ORDER BY completed_at DESC'
@@ -67,4 +78,4 @@ async function listAllSessions() {
   return result.rows;
 }
 
-module.exports = { initDB, createSession, getSession, updateSession, listCompletedSessions, listAllSessions };
+module.exports = { initDB, createSession, getSession, getSessionByConversationId, updateSession, listCompletedSessions, listAllSessions };

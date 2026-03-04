@@ -12,6 +12,8 @@ import './voice-engine.js';
   let conversation = null;  // ElevenLabs Conversation instance
   let isConvAIMode = true;  // true = ElevenLabs ConvAI, false = text fallback
   let sessionEnded = false;
+  let convaiConversationId = null; // ElevenLabs conversation ID for polling
+  let resolvedSessionId = null;    // Server session ID once webhook processes
 
   // ===== Element Bindings =====
   document.getElementById('btn-start').addEventListener('click', startSession);
@@ -44,6 +46,8 @@ import './voice-engine.js';
 
         onConnect: () => {
           console.log('ConvAI connected');
+          convaiConversationId = conversation.getId();
+          console.log('Conversation ID:', convaiConversationId);
           ui.visualizer.setState('listening');
           ui.voiceLabel.textContent = 'Listening...';
           startOrbAnimation();
@@ -171,15 +175,50 @@ import './voice-engine.js';
 
   function showSummary() {
     stopOrbAnimation();
-    ui.buildSummary();
     ui.showScreen('summary');
+
+    if (convaiConversationId && !resolvedSessionId) {
+      // ConvAI mode — poll for webhook completion
+      ui.buildSummaryPolling();
+      pollForBrief();
+    } else if (resolvedSessionId || fallbackSessionId) {
+      ui.buildSummaryReady();
+    } else {
+      ui.buildSummary();
+    }
+  }
+
+  let pollTimer = null;
+
+  function pollForBrief() {
+    if (!convaiConversationId) return;
+
+    async function check() {
+      try {
+        const res = await fetch(`/api/webhook/status/${convaiConversationId}`);
+        const data = await res.json();
+
+        if (data.status === 'ready') {
+          resolvedSessionId = data.sessionId;
+          ui.buildSummaryReady(data.clientName, data.turnCount);
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+        // 'processing' or 'generating' — keep polling
+      } catch (err) {
+        console.error('Poll error:', err);
+      }
+    }
+
+    check(); // immediate first check
+    pollTimer = setInterval(check, 5000); // then every 5 seconds
   }
 
   function downloadBrief() {
-    if (fallbackSessionId) {
-      window.location.href = `/api/download/${fallbackSessionId}`;
+    const sid = resolvedSessionId || fallbackSessionId;
+    if (sid) {
+      window.location.href = `/api/download/${sid}`;
     } else {
-      ui.toast('Your brief is being generated. Check the admin dashboard shortly.');
+      ui.toast('Still generating — please wait a moment.');
     }
   }
 })();

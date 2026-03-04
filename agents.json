@@ -3,6 +3,14 @@
         {
             "config": "agent_configs/Voice-Intake-Interviewer.json",
             "id": "agent_2901kjvcz4n4e0tsr9qjvqb74ryz"
+        },
+        {
+            "config": "agent_configs/gbc-sales.json",
+            "id": "agent_7801k43qedkve2srdx911q6325m4"
+        },
+        {
+            "config": "agent_configs/Support-agent.json",
+            "id": "agent_1401k39er2refh4s5fgd80jgskbt"
         }
     ]
 }

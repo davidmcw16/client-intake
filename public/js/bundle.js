@@ -26167,9 +26167,29 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       this.modeToggle.style.display = "block";
       this.modeToggle.textContent = "Switch to typing";
     }
-    /** Build summary screen */
+    /** Build summary screen — generic fallback */
     buildSummary() {
       this.summaryContainer.innerHTML = '<p style="color: var(--text-dim); margin-bottom: 16px;">Your project brief has been generated and is ready to download.</p>';
+    }
+    /** Build summary screen — polling state */
+    buildSummaryPolling() {
+      this.summaryContainer.innerHTML = `
+      <div style="text-align: center;">
+        <div class="polling-spinner"></div>
+        <p style="color: var(--text-dim); margin-top: 16px;">Generating your project brief...</p>
+        <p style="color: var(--text-dim); font-size: 0.85rem;">This usually takes 30\u201360 seconds.</p>
+      </div>
+    `;
+      document.getElementById("btn-download").style.display = "none";
+    }
+    /** Build summary screen — ready to download */
+    buildSummaryReady(clientName, turnCount) {
+      const details = clientName && clientName !== "Client" ? `<p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 8px;">Client: ${clientName}${turnCount ? ` &middot; ${turnCount} turns` : ""}</p>` : "";
+      this.summaryContainer.innerHTML = `
+      ${details}
+      <p style="color: var(--text-dim); margin-bottom: 16px;">Your project brief is ready to download.</p>
+    `;
+      document.getElementById("btn-download").style.display = "inline-flex";
     }
     /** Show a toast notification */
     toast(message, duration = 3e3) {
@@ -26358,6 +26378,8 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     let conversation = null;
     let isConvAIMode = true;
     let sessionEnded = false;
+    let convaiConversationId = null;
+    let resolvedSessionId = null;
     document.getElementById("btn-start").addEventListener("click", startSession);
     document.getElementById("btn-submit-text").addEventListener("click", submitText);
     document.getElementById("btn-mode-toggle").addEventListener("click", toggleMode);
@@ -26381,6 +26403,8 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
           signedUrl: signed_url,
           onConnect: () => {
             console.log("ConvAI connected");
+            convaiConversationId = conversation.getId();
+            console.log("Conversation ID:", convaiConversationId);
             ui.visualizer.setState("listening");
             ui.voiceLabel.textContent = "Listening...";
             startOrbAnimation();
@@ -26495,14 +26519,44 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     }
     function showSummary() {
       stopOrbAnimation();
-      ui.buildSummary();
       ui.showScreen("summary");
+      if (convaiConversationId && !resolvedSessionId) {
+        ui.buildSummaryPolling();
+        pollForBrief();
+      } else if (resolvedSessionId || fallbackSessionId) {
+        ui.buildSummaryReady();
+      } else {
+        ui.buildSummary();
+      }
+    }
+    let pollTimer = null;
+    function pollForBrief() {
+      if (!convaiConversationId) return;
+      async function check() {
+        try {
+          const res = await fetch(`/api/webhook/status/${convaiConversationId}`);
+          const data = await res.json();
+          if (data.status === "ready") {
+            resolvedSessionId = data.sessionId;
+            ui.buildSummaryReady(data.clientName, data.turnCount);
+            if (pollTimer) {
+              clearInterval(pollTimer);
+              pollTimer = null;
+            }
+          }
+        } catch (err) {
+          console.error("Poll error:", err);
+        }
+      }
+      check();
+      pollTimer = setInterval(check, 5e3);
     }
     function downloadBrief() {
-      if (fallbackSessionId) {
-        window.location.href = `/api/download/${fallbackSessionId}`;
+      const sid = resolvedSessionId || fallbackSessionId;
+      if (sid) {
+        window.location.href = `/api/download/${sid}`;
       } else {
-        ui.toast("Your brief is being generated. Check the admin dashboard shortly.");
+        ui.toast("Still generating \u2014 please wait a moment.");
       }
     }
   })();

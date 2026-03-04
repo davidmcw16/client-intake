@@ -59,9 +59,10 @@ router.post('/', async (req, res) => {
     const userTurns = messages.filter(m => m.role === 'user').length;
     const clientName = extractClientName(messages);
 
-    // Create session in DB
+    // Create session in DB with conversation_id for frontend polling
     const sessionId = uuidv4();
     await db.createSession(sessionId);
+    await db.updateSession(sessionId, { conversation_id: conversation_id });
 
     // Build transcript text for PRP generation
     const transcriptText = messages
@@ -103,6 +104,34 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('Webhook processing error:', err);
     // Don't re-throw — response already sent
+  }
+});
+
+// Poll for session status by ElevenLabs conversation_id
+router.get('/status/:conversationId', async (req, res) => {
+  try {
+    const session = await db.getSessionByConversationId(req.params.conversationId);
+
+    if (!session) {
+      // Webhook hasn't arrived yet — tell client to keep polling
+      return res.json({ status: 'processing' });
+    }
+
+    if (!session.is_complete) {
+      // Session created but LLM generation still running
+      return res.json({ status: 'generating' });
+    }
+
+    // Ready — return session ID for download
+    return res.json({
+      status: 'ready',
+      sessionId: session.id,
+      clientName: session.client_name,
+      turnCount: session.turn_count
+    });
+  } catch (err) {
+    console.error('Status poll error:', err);
+    res.status(500).json({ error: 'Internal error' });
   }
 });
 

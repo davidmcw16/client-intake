@@ -143,9 +143,33 @@ class UI {
     this.modeToggle.textContent = 'Switch to typing';
   }
 
-  /** Build summary screen */
+  /** Build summary screen — generic fallback */
   buildSummary() {
     this.summaryContainer.innerHTML = '<p style="color: var(--text-dim); margin-bottom: 16px;">Your project brief has been generated and is ready to download.</p>';
+  }
+
+  /** Build summary screen — polling state */
+  buildSummaryPolling() {
+    this.summaryContainer.innerHTML = `
+      <div style="text-align: center;">
+        <div class="polling-spinner"></div>
+        <p style="color: var(--text-dim); margin-top: 16px;">Generating your project brief...</p>
+        <p style="color: var(--text-dim); font-size: 0.85rem;">This usually takes 30–60 seconds.</p>
+      </div>
+    `;
+    document.getElementById('btn-download').style.display = 'none';
+  }
+
+  /** Build summary screen — ready to download */
+  buildSummaryReady(clientName, turnCount) {
+    const details = clientName && clientName !== 'Client'
+      ? `<p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 8px;">Client: ${clientName}${turnCount ? ` &middot; ${turnCount} turns` : ''}</p>`
+      : '';
+    this.summaryContainer.innerHTML = `
+      ${details}
+      <p style="color: var(--text-dim); margin-bottom: 16px;">Your project brief is ready to download.</p>
+    `;
+    document.getElementById('btn-download').style.display = 'inline-flex';
   }
 
   /** Show a toast notification */
