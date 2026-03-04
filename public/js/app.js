@@ -65,8 +65,13 @@ import './voice-engine.js';
 
         onConnect: () => {
           console.log('ConvAI connected');
-          convaiConversationId = conversation.getId();
-          console.log('Conversation ID:', convaiConversationId);
+          // conversation may not be assigned yet; defer getId
+          setTimeout(() => {
+            if (conversation) {
+              convaiConversationId = conversation.getId();
+              console.log('Conversation ID:', convaiConversationId);
+            }
+          }, 0);
           ui.visualizer.setState('listening');
           ui.voiceLabel.textContent = 'Listening...';
           startOrbAnimation();

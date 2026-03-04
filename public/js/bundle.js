@@ -26416,8 +26416,12 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
           signedUrl: signed_url,
           onConnect: () => {
             console.log("ConvAI connected");
-            convaiConversationId = conversation.getId();
-            console.log("Conversation ID:", convaiConversationId);
+            setTimeout(() => {
+              if (conversation) {
+                convaiConversationId = conversation.getId();
+                console.log("Conversation ID:", convaiConversationId);
+              }
+            }, 0);
             ui.visualizer.setState("listening");
             ui.voiceLabel.textContent = "Listening...";
             startOrbAnimation();
