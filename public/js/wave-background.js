@@ -1,6 +1,6 @@
 /**
  * WaveBackground — full-screen canvas with flowing sonic waveform lines.
- * Subtle, ambient animation that responds to mouse/touch position.
+ * Fewer lines, bigger curves, each with unique character.
  */
 class WaveBackground {
   constructor(canvas) {
@@ -10,6 +10,31 @@ class WaveBackground {
     this.time = 0;
     this.animFrame = null;
     this.dpr = window.devicePixelRatio || 1;
+
+    // Each line gets its own personality — randomized once
+    this.lineCount = 14;
+    this.lines = [];
+    for (let i = 0; i < this.lineCount; i++) {
+      this.lines.push({
+        // Vertical position (spread across screen)
+        yBase: (i / (this.lineCount - 1)) * 0.8 + 0.1, // 10%-90% of height
+        // Unique wave parameters per line
+        freq1: 1.5 + Math.random() * 1.5,   // primary wave frequency
+        freq2: 2.5 + Math.random() * 2.0,   // secondary
+        freq3: 0.8 + Math.random() * 0.8,   // slow undulation
+        amp1: 0.06 + Math.random() * 0.06,  // amplitudes as % of height
+        amp2: 0.025 + Math.random() * 0.03,
+        amp3: 0.04 + Math.random() * 0.04,
+        speed1: 0.15 + Math.random() * 0.2, // speeds
+        speed2: -(0.1 + Math.random() * 0.15), // counter-direction
+        speed3: 0.05 + Math.random() * 0.1,
+        phase: Math.random() * Math.PI * 2,  // start phase offset
+        // Visual
+        hue: 235 + Math.random() * 40,       // blue-purple range
+        alpha: 0.08 + Math.random() * 0.14,
+        width: 1 + Math.random() * 1,
+      });
+    }
 
     this._resize();
     this._bindEvents();
@@ -52,51 +77,39 @@ class WaveBackground {
     const w = this.width;
     const h = this.height;
 
-    // Fade trail effect
-    ctx.fillStyle = 'rgba(6, 6, 12, 0.12)';
+    // Fade trail — creates motion blur / ghosting
+    ctx.fillStyle = 'rgba(6, 6, 12, 0.08)';
     ctx.fillRect(0, 0, w, h);
 
-    const lineCount = 40;
-    const segmentCount = 100;
-    const centerY = h / 2;
-
-    // Mouse influence (normalized)
+    const segmentCount = 120;
     const mx = this.mouse.x / w;
     const my = this.mouse.y / h;
 
-    for (let i = 0; i < lineCount; i++) {
+    for (let i = 0; i < this.lineCount; i++) {
+      const line = this.lines[i];
+      const baseY = line.yBase * h;
+
       ctx.beginPath();
-
-      const progress = i / lineCount;
-      // Spread lines vertically around center
-      const yOffset = (progress - 0.5) * h * 0.6;
-
-      // Color: indigo to purple gradient based on line position
-      const hue = 240 + progress * 30; // 240 (blue) to 270 (purple)
-      const saturation = 70 + progress * 20;
-      const lightness = 55 + Math.sin(progress * Math.PI) * 15;
-      const alpha = 0.15 + Math.sin(progress * Math.PI) * 0.2;
-
-      ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
-      ctx.lineWidth = 1 + Math.sin(progress * Math.PI) * 0.5;
+      ctx.strokeStyle = `hsla(${line.hue}, 80%, 60%, ${line.alpha})`;
+      ctx.lineWidth = line.width;
 
       for (let j = 0; j <= segmentCount; j++) {
         const x = (j / segmentCount) * w;
         const xNorm = j / segmentCount;
 
-        // Multiple sine waves combined for organic movement
-        const wave1 = Math.sin(xNorm * 4 + this.time * 0.3 + progress * 3) * 30;
-        const wave2 = Math.sin(xNorm * 7 - this.time * 0.2 + progress * 2) * 15;
-        const wave3 = Math.sin(xNorm * 2 + this.time * 0.15 + progress * 5) * 20;
+        // Three layered sine waves with unique params per line
+        const wave1 = Math.sin(xNorm * Math.PI * line.freq1 + this.time * line.speed1 + line.phase) * h * line.amp1;
+        const wave2 = Math.sin(xNorm * Math.PI * line.freq2 + this.time * line.speed2 + line.phase * 1.7) * h * line.amp2;
+        const wave3 = Math.sin(xNorm * Math.PI * line.freq3 + this.time * line.speed3 + line.phase * 0.5) * h * line.amp3;
 
-        // Mouse influence — waves bend toward cursor
-        const dx = x / w - mx;
-        const dy = (centerY + yOffset) / h - my;
+        // Mouse pull — lines curve toward cursor
+        const dx = xNorm - mx;
+        const dy = line.yBase - my;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const mouseInfluence = Math.max(0, 1 - dist * 2) * 25;
-        const mouseWave = mouseInfluence * Math.sin(xNorm * 3 + this.time * 0.5);
+        const pull = Math.max(0, 1 - dist * 2.5) * h * 0.06;
+        const mouseBend = pull * Math.sin((xNorm - mx) * Math.PI * 2);
 
-        const y = centerY + yOffset + wave1 + wave2 + wave3 + mouseWave;
+        const y = baseY + wave1 + wave2 + wave3 + mouseBend;
 
         if (j === 0) {
           ctx.moveTo(x, y);
@@ -111,9 +124,9 @@ class WaveBackground {
     // Subtle center glow
     const glowGrad = ctx.createRadialGradient(
       w / 2, h / 2, 0,
-      w / 2, h / 2, h * 0.4
+      w / 2, h / 2, h * 0.45
     );
-    glowGrad.addColorStop(0, 'rgba(99, 102, 241, 0.03)');
+    glowGrad.addColorStop(0, 'rgba(99, 102, 241, 0.025)');
     glowGrad.addColorStop(1, 'rgba(99, 102, 241, 0)');
     ctx.fillStyle = glowGrad;
     ctx.fillRect(0, 0, w, h);
