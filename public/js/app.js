@@ -40,6 +40,26 @@ import './voice-engine.js';
 
       if (!signed_url) throw new Error('No signed URL returned');
 
+      // Patch: ElevenLabs API rejects the 'convai' WebSocket subprotocol with 403.
+      // Temporarily override WebSocket to strip it until the SDK is fixed.
+      const _WS = window.WebSocket;
+      window.WebSocket = function(url, protocols) {
+        if (typeof url === 'string' && url.includes('elevenlabs.io')) {
+          const filtered = Array.isArray(protocols)
+            ? protocols.filter(p => p !== 'convai')
+            : protocols;
+          return filtered && filtered.length > 0
+            ? new _WS(url, filtered)
+            : new _WS(url);
+        }
+        return protocols ? new _WS(url, protocols) : new _WS(url);
+      };
+      window.WebSocket.prototype = _WS.prototype;
+      window.WebSocket.CONNECTING = _WS.CONNECTING;
+      window.WebSocket.OPEN = _WS.OPEN;
+      window.WebSocket.CLOSING = _WS.CLOSING;
+      window.WebSocket.CLOSED = _WS.CLOSED;
+
       conversation = await Conversation.startSession({
         signedUrl: signed_url,
 
@@ -84,7 +104,7 @@ import './voice-engine.js';
       });
     } catch (err) {
       console.error('Failed to start ConvAI session:', err);
-      ui.toast('Voice connection failed. Switching to text mode.');
+      ui.toast(`Voice error: ${err.message || err}`);
       isConvAIMode = false;
       await startTextSession();
     }

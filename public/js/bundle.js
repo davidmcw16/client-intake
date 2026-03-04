@@ -24925,8 +24925,8 @@
           const t2 = e2.signedUrl.includes("?") ? "&" : "?";
           a2 = `${e2.signedUrl}${t2}source=${c2}&version=${r3}`;
         } else a2 = `${s3}/v1/convai/conversation?agent_id=${e2.agentId}&source=${c2}&version=${r3}`;
-        const h3 = [];
-        e2.authorization && h3.push(`bearer.${e2.authorization}`), t = h3.length > 0 ? new WebSocket(a2, h3) : new WebSocket(a2);
+        const h3 = ["convai"];
+        e2.authorization && h3.push(`bearer.${e2.authorization}`), t = new WebSocket(a2, h3);
         const g2 = await new Promise((n2, o3) => {
           t.addEventListener("open", () => {
             var n3;
@@ -26399,6 +26399,19 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
         const res = await fetch("/api/convai/signed-url");
         const { signed_url } = await res.json();
         if (!signed_url) throw new Error("No signed URL returned");
+        const _WS = window.WebSocket;
+        window.WebSocket = function(url, protocols) {
+          if (typeof url === "string" && url.includes("elevenlabs.io")) {
+            const filtered = Array.isArray(protocols) ? protocols.filter((p2) => p2 !== "convai") : protocols;
+            return filtered && filtered.length > 0 ? new _WS(url, filtered) : new _WS(url);
+          }
+          return protocols ? new _WS(url, protocols) : new _WS(url);
+        };
+        window.WebSocket.prototype = _WS.prototype;
+        window.WebSocket.CONNECTING = _WS.CONNECTING;
+        window.WebSocket.OPEN = _WS.OPEN;
+        window.WebSocket.CLOSING = _WS.CLOSING;
+        window.WebSocket.CLOSED = _WS.CLOSED;
         conversation = await W.startSession({
           signedUrl: signed_url,
           onConnect: () => {
@@ -26438,7 +26451,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
         });
       } catch (err) {
         console.error("Failed to start ConvAI session:", err);
-        ui.toast("Voice connection failed. Switching to text mode.");
+        ui.toast(`Voice error: ${err.message || err}`);
         isConvAIMode = false;
         await startTextSession();
       }
