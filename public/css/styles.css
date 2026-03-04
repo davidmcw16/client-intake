@@ -55,21 +55,10 @@ body {
   mask-repeat: no-repeat;
 }
 
-/* ===== Wave Background Canvas ===== */
-#wave-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100dvh;
-  z-index: 1;
-  pointer-events: none;
-}
-
 /* ===== App Container ===== */
 #app {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
@@ -522,9 +511,5 @@ body {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
-  }
-
-  #wave-canvas {
-    display: none;
   }
 }
