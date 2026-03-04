@@ -20,7 +20,8 @@ function verifySignature(req) {
   const timestamp = parts['t'];
   const hash = parts['v0'];
   if (!timestamp || !hash) return false;
-  const payload = `${timestamp}.${JSON.stringify(req.body)}`;
+  const body = req.rawBody ? req.rawBody.toString() : JSON.stringify(req.body);
+  const payload = `${timestamp}.${body}`;
   const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
   return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expected));
 }

@@ -14,8 +14,15 @@ const webhookRoutes = require('./src/routes/webhook');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json({ limit: '1mb' }));
+// Middleware — capture raw body on webhook route for HMAC verification
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, _res, buf) => {
+    if (req.originalUrl === '/api/webhook' || req.originalUrl === '/api/webhook/') {
+      req.rawBody = buf;
+    }
+  }
+}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
