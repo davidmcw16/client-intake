@@ -1,9 +1,29 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const db = require('../services/db');
 const llm = require('../services/llm');
 const { PRP_SYNTHESIS_PROMPT } = require('../prompts/system-prompt');
+
+function verifySignature(req) {
+  const secret = process.env.ELEVENLABS_WEBHOOK_SECRET;
+  if (!secret) return true; // Skip verification if no secret configured
+  const sig = req.headers['elevenlabs-signature'];
+  if (!sig) return false;
+  // Format: t=<timestamp>,v0=<hash>
+  const parts = {};
+  sig.split(',').forEach(p => {
+    const [k, v] = p.split('=');
+    parts[k] = v;
+  });
+  const timestamp = parts['t'];
+  const hash = parts['v0'];
+  if (!timestamp || !hash) return false;
+  const payload = `${timestamp}.${JSON.stringify(req.body)}`;
+  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expected));
+}
 
 function extractClientName(messages) {
   const userMessages = messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
@@ -11,8 +31,13 @@ function extractClientName(messages) {
   return match ? match[1] : 'Client';
 }
 
-router.post('/conversation', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
+    if (!verifySignature(req)) {
+      console.warn('Webhook: Invalid HMAC signature');
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+
     // Acknowledge receipt immediately (ElevenLabs requires 200)
     res.status(200).json({ received: true });
 
