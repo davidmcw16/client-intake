@@ -25857,12 +25857,12 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     }
     _resize() {
       const dpr = window.devicePixelRatio || 1;
-      const size = 200;
+      const size = 320;
       this.canvas.width = size * dpr;
       this.canvas.height = size * dpr;
       this.ctx.scale(dpr, dpr);
-      this.cx = 100;
-      this.cy = 100;
+      this.cx = 160;
+      this.cy = 160;
     }
     /** Connect to an Audio element for real audio-reactive animation */
     connectAudio(audioElement) {
@@ -25934,7 +25934,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       const ctx = this.ctx;
       const cx = this.cx;
       const cy = this.cy;
-      ctx.clearRect(0, 0, 200, 200);
+      ctx.clearRect(0, 0, 320, 320);
       switch (this.state) {
         case "speaking":
           this._drawSpeaking(ctx, cx, cy);
@@ -25952,10 +25952,10 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     }
     _drawSpeaking(ctx, cx, cy) {
       const level = this._getLevel();
-      const baseR = 36;
-      const r3 = baseR + level * 14;
+      const baseR = 58;
+      const r3 = baseR + level * 22;
       for (let i = 3; i >= 1; i--) {
-        const rippleR = r3 + i * 8 + level * i * 4;
+        const rippleR = r3 + i * 12 + level * i * 6;
         const alpha = 0.12 - i * 0.03;
         ctx.beginPath();
         ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
@@ -25970,7 +25970,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       ctx.fillStyle = grad;
       ctx.fill();
       ctx.shadowColor = "rgba(99, 102, 241, 0.5)";
-      ctx.shadowBlur = 20 + level * 20;
+      ctx.shadowBlur = 30 + level * 30;
       ctx.beginPath();
       ctx.arc(cx, cy, r3, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(99, 102, 241, 0.01)";
@@ -25980,9 +25980,9 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     }
     _drawListening(ctx, cx, cy) {
       const pulse = 1 + 0.06 * Math.sin(this._t * 4);
-      const r3 = 36 * pulse;
+      const r3 = 58 * pulse;
       ctx.beginPath();
-      ctx.arc(cx, cy, r3 + 8, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r3 + 12, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(239, 68, 68, 0.1)";
       ctx.fill();
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r3);
@@ -25993,7 +25993,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       ctx.fillStyle = grad;
       ctx.fill();
       ctx.shadowColor = "rgba(239, 68, 68, 0.4)";
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 30;
       ctx.beginPath();
       ctx.arc(cx, cy, r3, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(239, 68, 68, 0.01)";
@@ -26003,7 +26003,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
     }
     _drawThinking(ctx, cx, cy) {
       const pulse = 1 + 0.04 * Math.sin(this._t * 2);
-      const r3 = 36 * pulse;
+      const r3 = 58 * pulse;
       ctx.beginPath();
       ctx.arc(cx, cy, r3, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(99, 102, 241, 0.8)";
@@ -26022,7 +26022,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       ctx.stroke();
       ctx.lineCap = "butt";
       ctx.shadowColor = "rgba(99, 102, 241, 0.3)";
-      ctx.shadowBlur = 15;
+      ctx.shadowBlur = 25;
       ctx.beginPath();
       ctx.arc(cx, cy, r3, 0, Math.PI * 2);
       ctx.strokeStyle = "rgba(99, 102, 241, 0.01)";
@@ -26032,7 +26032,7 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
       ctx.shadowColor = "transparent";
     }
     _drawIdle(ctx, cx, cy) {
-      const r3 = 36;
+      const r3 = 58;
       ctx.beginPath();
       ctx.arc(cx, cy, r3, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(28, 28, 46, 1)";
@@ -26372,8 +26372,114 @@ registerProcessor("scribeAudioProcessor", ScribeAudioProcessor);
   };
   window.VoiceEngine = VoiceEngine2;
 
+  // public/js/wave-background.js
+  var WaveBackground2 = class {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext("2d");
+      this.mouse = { x: 0, y: 0 };
+      this.time = 0;
+      this.animFrame = null;
+      this.dpr = window.devicePixelRatio || 1;
+      this._resize();
+      this._bindEvents();
+      this._animate();
+    }
+    _resize() {
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+      this.canvas.width = this.width * this.dpr;
+      this.canvas.height = this.height * this.dpr;
+      this.canvas.style.width = this.width + "px";
+      this.canvas.style.height = this.height + "px";
+      this.ctx.scale(this.dpr, this.dpr);
+      this.mouse.x = this.width / 2;
+      this.mouse.y = this.height / 2;
+    }
+    _bindEvents() {
+      window.addEventListener("resize", () => {
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this._resize();
+      });
+      window.addEventListener("mousemove", (e2) => {
+        this.mouse.x = e2.clientX;
+        this.mouse.y = e2.clientY;
+      });
+      window.addEventListener("touchmove", (e2) => {
+        if (e2.touches[0]) {
+          this.mouse.x = e2.touches[0].clientX;
+          this.mouse.y = e2.touches[0].clientY;
+        }
+      }, { passive: true });
+    }
+    _animate() {
+      const ctx = this.ctx;
+      const w2 = this.width;
+      const h3 = this.height;
+      ctx.fillStyle = "rgba(6, 6, 12, 0.12)";
+      ctx.fillRect(0, 0, w2, h3);
+      const lineCount = 40;
+      const segmentCount = 100;
+      const centerY = h3 / 2;
+      const mx = this.mouse.x / w2;
+      const my = this.mouse.y / h3;
+      for (let i = 0; i < lineCount; i++) {
+        ctx.beginPath();
+        const progress = i / lineCount;
+        const yOffset = (progress - 0.5) * h3 * 0.6;
+        const hue = 240 + progress * 30;
+        const saturation = 70 + progress * 20;
+        const lightness = 55 + Math.sin(progress * Math.PI) * 15;
+        const alpha = 0.15 + Math.sin(progress * Math.PI) * 0.2;
+        ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+        ctx.lineWidth = 1 + Math.sin(progress * Math.PI) * 0.5;
+        for (let j = 0; j <= segmentCount; j++) {
+          const x2 = j / segmentCount * w2;
+          const xNorm = j / segmentCount;
+          const wave1 = Math.sin(xNorm * 4 + this.time * 0.3 + progress * 3) * 30;
+          const wave2 = Math.sin(xNorm * 7 - this.time * 0.2 + progress * 2) * 15;
+          const wave3 = Math.sin(xNorm * 2 + this.time * 0.15 + progress * 5) * 20;
+          const dx = x2 / w2 - mx;
+          const dy = (centerY + yOffset) / h3 - my;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const mouseInfluence = Math.max(0, 1 - dist * 2) * 25;
+          const mouseWave = mouseInfluence * Math.sin(xNorm * 3 + this.time * 0.5);
+          const y2 = centerY + yOffset + wave1 + wave2 + wave3 + mouseWave;
+          if (j === 0) {
+            ctx.moveTo(x2, y2);
+          } else {
+            ctx.lineTo(x2, y2);
+          }
+        }
+        ctx.stroke();
+      }
+      const glowGrad = ctx.createRadialGradient(
+        w2 / 2,
+        h3 / 2,
+        0,
+        w2 / 2,
+        h3 / 2,
+        h3 * 0.4
+      );
+      glowGrad.addColorStop(0, "rgba(99, 102, 241, 0.03)");
+      glowGrad.addColorStop(1, "rgba(99, 102, 241, 0)");
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(0, 0, w2, h3);
+      this.time += 0.016;
+      this.animFrame = requestAnimationFrame(() => this._animate());
+    }
+    destroy() {
+      if (this.animFrame) {
+        cancelAnimationFrame(this.animFrame);
+      }
+    }
+  };
+  window.WaveBackground = WaveBackground2;
+
   // public/js/app.js
   (function() {
+    const waveCanvas = document.getElementById("wave-canvas");
+    if (waveCanvas) new WaveBackground(waveCanvas);
     const ui = new UI();
     let conversation = null;
     let isConvAIMode = true;

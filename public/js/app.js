@@ -4,8 +4,13 @@ import { Conversation } from '@elevenlabs/client';
 import './orb-visualizer.js';
 import './ui.js';
 import './voice-engine.js';
+import './wave-background.js';
 
 (function () {
+  // Initialize wave background
+  const waveCanvas = document.getElementById('wave-canvas');
+  if (waveCanvas) new WaveBackground(waveCanvas);
+
   const ui = new UI();
 
   // State

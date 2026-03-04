@@ -30,12 +30,12 @@ class OrbVisualizer {
 
   _resize() {
     const dpr = window.devicePixelRatio || 1;
-    const size = 200;
+    const size = 320;
     this.canvas.width = size * dpr;
     this.canvas.height = size * dpr;
     this.ctx.scale(dpr, dpr);
-    this.cx = 100;
-    this.cy = 100;
+    this.cx = 160;
+    this.cy = 160;
   }
 
   /** Connect to an Audio element for real audio-reactive animation */
@@ -123,7 +123,7 @@ class OrbVisualizer {
     const cy = this.cy;
 
     // Clear
-    ctx.clearRect(0, 0, 200, 200);
+    ctx.clearRect(0, 0, 320, 320);
 
     switch (this.state) {
       case 'speaking':
@@ -144,12 +144,12 @@ class OrbVisualizer {
 
   _drawSpeaking(ctx, cx, cy) {
     const level = this._getLevel();
-    const baseR = 36;
-    const r = baseR + level * 14;
+    const baseR = 58;
+    const r = baseR + level * 22;
 
     // Outer ripple rings
     for (let i = 3; i >= 1; i--) {
-      const rippleR = r + i * 8 + level * i * 4;
+      const rippleR = r + i * 12 + level * i * 6;
       const alpha = 0.12 - i * 0.03;
       ctx.beginPath();
       ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
@@ -168,7 +168,7 @@ class OrbVisualizer {
 
     // Glow
     ctx.shadowColor = 'rgba(99, 102, 241, 0.5)';
-    ctx.shadowBlur = 20 + level * 20;
+    ctx.shadowBlur = 30 + level * 30;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(99, 102, 241, 0.01)';
@@ -179,11 +179,11 @@ class OrbVisualizer {
 
   _drawListening(ctx, cx, cy) {
     const pulse = 1 + 0.06 * Math.sin(this._t * 4);
-    const r = 36 * pulse;
+    const r = 58 * pulse;
 
     // Outer glow ring
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 8, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r + 12, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
     ctx.fill();
 
@@ -198,7 +198,7 @@ class OrbVisualizer {
 
     // Glow
     ctx.shadowColor = 'rgba(239, 68, 68, 0.4)';
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 30;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(239, 68, 68, 0.01)';
@@ -209,7 +209,7 @@ class OrbVisualizer {
 
   _drawThinking(ctx, cx, cy) {
     const pulse = 1 + 0.04 * Math.sin(this._t * 2);
-    const r = 36 * pulse;
+    const r = 58 * pulse;
 
     // Outlined circle with accent border
     ctx.beginPath();
@@ -236,7 +236,7 @@ class OrbVisualizer {
 
     // Subtle glow
     ctx.shadowColor = 'rgba(99, 102, 241, 0.3)';
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 25;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(99, 102, 241, 0.01)';
@@ -247,7 +247,7 @@ class OrbVisualizer {
   }
 
   _drawIdle(ctx, cx, cy) {
-    const r = 36;
+    const r = 58;
 
     // Dark circle
     ctx.beginPath();
