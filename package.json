@@ -1,17 +1,23 @@
 {
   "name": "voice-intake",
-  "version": "2.0.0",
-  "description": "Voice-powered project intake via ElevenLabs Conversational AI",
+  "version": "1.0.0",
+  "description": "Voice-first project intake tool for non-technical clients",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "build": "esbuild public/js/app.js --bundle --outfile=public/js/bundle.js --format=iife --platform=browser",
+    "dev": "npm run build && node --watch server.js",
+    "start": "npm run build && node server.js"
   },
   "dependencies": {
-    "express": "^4.21",
-    "dotenv": "^16.4",
-    "@anthropic-ai/sdk": "^0.39",
-    "@neondatabase/serverless": "^0.10",
-    "ws": "^8.18"
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@elevenlabs/client": "^0.15.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "pg": "^8.19.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.3"
   }
 }

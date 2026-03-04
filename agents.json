@@ -1,0 +1,8 @@
+{
+    "agents": [
+        {
+            "config": "agent_configs/Voice-Intake-Interviewer.json",
+            "id": "agent_2901kjvcz4n4e0tsr9qjvqb74ryz"
+        }
+    ]
+}

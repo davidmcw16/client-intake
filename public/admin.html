@@ -3,817 +3,410 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Project Intakes</title>
+  <title>Admin Dashboard — Voice Intake</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
       --bg: #0a0a0f;
-      --card: #14141f;
+      --bg-card: #14141f;
+      --bg-elevated: #1c1c2e;
       --text: #e8e8f0;
+      --text-dim: #8888a0;
       --accent: #6366f1;
-      --accent-hover: #818cf8;
-      --border: #1e1e2e;
-      --muted: #888899;
-      --green: #22c55e;
-      --yellow: #eab308;
-      --red: #ef4444;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+      --accent-glow: rgba(99, 102, 241, 0.3);
+      --success: #22c55e;
+      --danger: #ef4444;
+      --radius: 16px;
     }
 
     body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.6;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ---- Auth Overlay ---- */
-    #auth-overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px;
     }
 
-    .auth-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 40px;
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-
-    .auth-card h1 {
+    h1 {
       font-size: 1.5rem;
-      margin-bottom: 8px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      letter-spacing: -0.02em;
     }
 
-    .auth-card p {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin-bottom: 24px;
+    h1 span { color: var(--text-dim); font-weight: 400; }
+
+    /* Login */
+    .login-form {
+      display: flex;
+      gap: 12px;
+      max-width: 400px;
+      margin: 80px auto;
     }
 
-    #password-input {
-      width: 100%;
+    .login-form input {
+      flex: 1;
       padding: 12px 16px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
       color: var(--text);
       font-size: 1rem;
+      font-family: inherit;
+    }
+
+    .login-form input:focus {
       outline: none;
-      transition: border-color 0.2s;
-    }
-
-    #password-input:focus {
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
-    .auth-error {
-      color: var(--red);
-      font-size: 0.85rem;
-      margin-top: 8px;
-      min-height: 1.2em;
-    }
-
-    .btn-login {
-      width: 100%;
-      margin-top: 16px;
-      padding: 12px;
+    .login-form button {
+      padding: 12px 24px;
       background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
     }
 
-    .btn-login:hover {
-      background: var(--accent-hover);
+    .login-form button:active { transform: scale(0.97); }
+
+    .error { color: var(--danger); font-size: 0.85rem; margin-top: 8px; text-align: center; }
+
+    /* Table */
+    .sessions-table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    .btn-login:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    .sessions-table th {
+      text-align: left;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
-    /* ---- Dashboard ---- */
-    #dashboard {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 32px;
+    .sessions-table td {
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
     }
 
-    .dashboard-header {
+    .sessions-table tr:hover td {
+      background: var(--bg-card);
+    }
+
+    .actions-cell {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 32px;
+      gap: 8px;
     }
 
-    .dashboard-header h1 {
-      font-size: 1.75rem;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .btn-sm {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
     }
 
-    .count-badge {
+    .btn-sm--view {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .btn-sm--download {
       background: var(--accent);
       color: #fff;
-      font-size: 0.8rem;
-      font-weight: 700;
-      padding: 2px 10px;
-      border-radius: 12px;
     }
 
-    .btn-logout {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: color 0.2s, border-color 0.2s;
-    }
+    .btn-sm:active { transform: scale(0.97); }
 
-    .btn-logout:hover {
-      color: var(--text);
-      border-color: var(--muted);
-    }
-
-    /* ---- Empty State ---- */
-    #empty-state {
-      display: none;
-      text-align: center;
-      padding: 80px 20px;
-      color: var(--muted);
-    }
-
-    #empty-state .empty-icon {
-      font-size: 3rem;
-      margin-bottom: 16px;
-      opacity: 0.4;
-    }
-
-    #empty-state p {
-      font-size: 1rem;
-      max-width: 400px;
-      margin: 0 auto;
-    }
-
-    /* ---- Intake List ---- */
-    #intake-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .intake-row {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    .intake-row:hover {
-      border-color: var(--accent);
-    }
-
-    .intake-row-header {
-      display: grid;
-      grid-template-columns: 1fr auto auto auto auto auto auto;
-      align-items: center;
-      gap: 16px;
-      padding: 16px 20px;
-    }
-
-    .intake-name {
-      font-weight: 600;
-      font-size: 1rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .intake-date {
-      color: var(--muted);
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .intake-duration {
-      color: var(--muted);
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .intake-turns {
-      color: var(--muted);
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .confidence-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
+    .status-badge {
       display: inline-block;
-    }
-
-    .confidence-dot.green { background: var(--green); }
-    .confidence-dot.yellow { background: var(--yellow); }
-    .confidence-dot.red { background: var(--red); }
-
-    .intake-vision {
-      color: var(--muted);
-      font-size: 0.85rem;
-      max-width: 200px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .intake-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .btn-icon {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 6px 10px;
+      padding: 3px 10px;
       border-radius: 6px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: color 0.2s, border-color 0.2s, background 0.2s;
-      white-space: nowrap;
-    }
-
-    .btn-icon:hover {
-      color: var(--text);
-      border-color: var(--muted);
-    }
-
-    .btn-icon.delete:hover {
-      color: var(--red);
-      border-color: var(--red);
-      background: rgba(239, 68, 68, 0.08);
-    }
-
-    /* ---- Expanded Detail ---- */
-    .intake-detail {
-      display: none;
-      padding: 0 20px 20px 20px;
-      border-top: 1px solid var(--border);
-    }
-
-    .intake-row.expanded .intake-detail {
-      display: block;
-    }
-
-    .detail-section {
-      margin-top: 20px;
-    }
-
-    .detail-section h3 {
-      font-size: 0.9rem;
-      color: var(--accent);
-      margin-bottom: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.03em;
     }
 
-    /* Conversation bubbles */
-    .conversation-log {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 400px;
-      overflow-y: auto;
-      padding-right: 8px;
+    .status-badge--complete { background: rgba(34,197,94,0.15); color: var(--success); }
+    .status-badge--abandoned { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .status-badge--started { background: rgba(136,136,160,0.15); color: var(--text-dim); }
+
+    /* Expanded session */
+    .session-detail {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin: 12px 0 24px;
+      border: 1px solid rgba(255,255,255,0.06);
     }
 
-    .conversation-log::-webkit-scrollbar {
-      width: 6px;
+    .session-detail h3 {
+      font-size: 1rem;
+      margin-bottom: 16px;
+      color: var(--accent);
     }
 
-    .conversation-log::-webkit-scrollbar-track {
-      background: var(--bg);
-    }
-
-    .conversation-log::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 3px;
-    }
-
-    .bubble {
-      padding: 10px 14px;
+    .transcript-entry {
+      margin-bottom: 12px;
+      padding: 8px 12px;
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       line-height: 1.5;
-      max-width: 80%;
     }
 
-    .bubble.ai {
-      align-self: flex-start;
-      background: var(--bg);
+    .transcript-entry--assistant {
+      background: var(--bg-elevated);
       border-left: 3px solid var(--accent);
     }
 
-    .bubble.client {
-      align-self: flex-end;
-      background: var(--card);
-      border: 1px solid var(--border);
+    .transcript-entry--user {
+      background: rgba(99, 102, 241, 0.1);
+      border-left: 3px solid var(--text-dim);
     }
 
-    .bubble-role {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 4px;
+    .transcript-entry .role {
       font-weight: 600;
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
     }
 
-    /* Confidence breakdown */
-    .confidence-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 10px;
-    }
-
-    .confidence-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      background: var(--bg);
-      border-radius: 8px;
-      font-size: 0.85rem;
-    }
-
-    .confidence-item .label {
-      color: var(--muted);
-    }
-
-    .confidence-item .score {
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-    }
-
-    .confidence-item .score.high {
-      color: var(--green);
-      background: rgba(34, 197, 94, 0.1);
-    }
-
-    .confidence-item .score.medium {
-      color: var(--yellow);
-      background: rgba(234, 179, 8, 0.1);
-    }
-
-    .confidence-item .score.low {
-      color: var(--red);
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    /* Markdown preview */
-    .markdown-preview {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    .prp-preview {
+      background: var(--bg-elevated);
+      border-radius: 12px;
       padding: 16px;
-      overflow-x: auto;
-      font-size: 0.85rem;
-      line-height: 1.6;
+      margin-top: 16px;
       white-space: pre-wrap;
-      word-wrap: break-word;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      color: var(--muted);
-      max-height: 500px;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      max-height: 400px;
       overflow-y: auto;
+      color: var(--text-dim);
+      font-family: 'SF Mono', SFMono-Regular, monospace;
     }
 
-    /* Loading spinner */
-    .spinner {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
+    .empty-state {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 48px 20px;
+      font-size: 0.95rem;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .logout-btn {
+      float: right;
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-dim);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
     }
 
-    /* Responsive */
-    @media (max-width: 900px) {
-      #dashboard {
-        padding: 16px;
-      }
-
-      .intake-row-header {
-        grid-template-columns: 1fr auto auto;
-        gap: 8px;
-      }
-
-      .intake-date,
-      .intake-duration,
-      .intake-turns,
-      .intake-vision {
-        display: none;
-      }
-
-      .confidence-grid {
-        grid-template-columns: 1fr;
-      }
+    @media (max-width: 640px) {
+      .sessions-table th:nth-child(2),
+      .sessions-table td:nth-child(2),
+      .sessions-table th:nth-child(4),
+      .sessions-table td:nth-child(4) { display: none; }
     }
   </style>
 </head>
 <body>
-
-  <!-- Auth Overlay -->
-  <div id="auth-overlay">
-    <div class="auth-card">
-      <h1>Admin Login</h1>
-      <p>Enter the admin password to view project intakes.</p>
-      <input type="password" id="password-input" placeholder="Password" autocomplete="current-password">
-      <div class="auth-error" id="auth-error"></div>
-      <button class="btn-login" id="btn-login">Log In</button>
-    </div>
-  </div>
-
-  <!-- Dashboard -->
-  <div id="dashboard" style="display:none;">
-    <div class="dashboard-header">
-      <h1>Project Intakes <span class="count-badge" id="count-badge">0</span></h1>
-      <button class="btn-logout" id="btn-logout">Log Out</button>
+  <div class="container">
+    <div id="login-view">
+      <h1>Voice Intake <span>— Admin</span></h1>
+      <form class="login-form" id="login-form">
+        <input type="password" id="password-input" placeholder="Admin password" autocomplete="current-password">
+        <button type="submit">Login</button>
+      </form>
+      <p class="error" id="login-error" style="display:none;"></p>
     </div>
 
-    <div id="empty-state">
-      <div class="empty-icon">&#128203;</div>
-      <p>No intakes yet. Share your intake link with a client to get started.</p>
+    <div id="dashboard-view" style="display:none;">
+      <h1>Voice Intake <span>— Admin</span> <button class="logout-btn" id="btn-logout">Logout</button></h1>
+      <table class="sessions-table" id="sessions-table">
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Turns</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="sessions-body"></tbody>
+      </table>
+      <p class="empty-state" id="empty-state" style="display:none;">No sessions yet.</p>
     </div>
-
-    <div id="intake-list"></div>
   </div>
 
   <script>
-    let password = '';
-
-    // ---- Auth ----
-    const authOverlay = document.getElementById('auth-overlay');
-    const dashboard = document.getElementById('dashboard');
-    const passwordInput = document.getElementById('password-input');
-    const btnLogin = document.getElementById('btn-login');
-    const authError = document.getElementById('auth-error');
-    const btnLogout = document.getElementById('btn-logout');
-
-    // Check for existing session
-    (function checkSession() {
-      const saved = sessionStorage.getItem('admin_password');
-      if (saved) {
-        password = saved;
-        tryLogin(true);
-      }
-    })();
-
-    passwordInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') btnLogin.click();
-    });
-
-    btnLogin.addEventListener('click', () => {
-      password = passwordInput.value.trim();
-      if (!password) {
-        authError.textContent = 'Please enter a password.';
-        return;
-      }
-      tryLogin(false);
-    });
-
-    btnLogout.addEventListener('click', () => {
-      sessionStorage.removeItem('admin_password');
-      password = '';
-      passwordInput.value = '';
-      authError.textContent = '';
-      dashboard.style.display = 'none';
-      authOverlay.style.display = 'flex';
-    });
-
-    async function tryLogin(fromSession) {
-      btnLogin.disabled = true;
-      authError.textContent = '';
-
-      try {
-        const res = await fetch('/api/admin/intakes', {
-          headers: { 'Authorization': `Bearer ${password}` }
-        });
-
-        if (res.status === 401) {
-          if (fromSession) {
-            sessionStorage.removeItem('admin_password');
-            password = '';
-          } else {
-            authError.textContent = 'Incorrect password';
-          }
-          btnLogin.disabled = false;
-          return;
-        }
-
-        if (!res.ok) {
-          authError.textContent = `Server error (${res.status})`;
-          btnLogin.disabled = false;
-          return;
-        }
-
-        // Success
-        sessionStorage.setItem('admin_password', password);
-        authOverlay.style.display = 'none';
-        dashboard.style.display = 'block';
-
-        const data = await res.json();
-        renderIntakes(data.intakes || data);
-      } catch (err) {
-        authError.textContent = 'Connection failed. Is the server running?';
-      } finally {
-        btnLogin.disabled = false;
-      }
-    }
-
-    // ---- Render Intakes ----
-    const intakeList = document.getElementById('intake-list');
+    const loginView = document.getElementById('login-view');
+    const dashboardView = document.getElementById('dashboard-view');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const sessionsBody = document.getElementById('sessions-body');
     const emptyState = document.getElementById('empty-state');
-    const countBadge = document.getElementById('count-badge');
+    let expandedRow = null;
 
-    function renderIntakes(intakes) {
-      intakeList.innerHTML = '';
-
-      if (!intakes || intakes.length === 0) {
-        emptyState.style.display = 'block';
-        countBadge.textContent = '0';
-        return;
-      }
-
-      emptyState.style.display = 'none';
-      countBadge.textContent = intakes.length;
-
-      intakes.forEach((intake) => {
-        const row = createIntakeRow(intake);
-        intakeList.appendChild(row);
-      });
-    }
-
-    function createIntakeRow(intake) {
-      const row = document.createElement('div');
-      row.className = 'intake-row';
-      row.dataset.id = intake.id;
-
-      const clientName = intake.client_name || intake.clientName || 'Unknown';
-      const date = formatDate(intake.created_at || intake.createdAt);
-      const durationMs = intake.duration_ms || intake.durationMs || (intake.duration_seconds || intake.durationSeconds || 0) * 1000;
-      const duration = formatDuration(durationMs / 1000);
-      const turns = intake.turn_count || intake.turnCount || 0;
-      const confidenceObj = intake.confidence || {};
-      const scores = Object.values(confidenceObj).filter(v => typeof v === 'number');
-      const confidence = scores.length > 0
-        ? scores.reduce((a, b) => a + b, 0) / scores.length
-        : (intake.overall_confidence || intake.overallConfidence || 0);
-      const confClass = confidence >= 0.7 ? 'green' : confidence >= 0.4 ? 'yellow' : 'red';
-      let vision = '';
-      if (intake.markdown) {
-        const visionMatch = intake.markdown.match(/### Vision\n+([^\n#]+)/);
-        if (visionMatch) {
-          vision = truncate(visionMatch[1].trim(), 100);
-        } else {
-          vision = truncate(intake.markdown.substring(0, 100), 100);
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginError.style.display = 'none';
+      const password = document.getElementById('password-input').value;
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        if (!res.ok) {
+          loginError.textContent = 'Invalid password';
+          loginError.style.display = 'block';
+          return;
         }
+        loginView.style.display = 'none';
+        dashboardView.style.display = 'block';
+        loadSessions();
+      } catch (err) {
+        loginError.textContent = 'Connection error';
+        loginError.style.display = 'block';
       }
+    });
 
-      row.innerHTML = `
-        <div class="intake-row-header">
-          <span class="intake-name">${escapeHtml(clientName)}</span>
-          <span class="intake-date">${date}</span>
-          <span class="intake-duration">${duration}</span>
-          <span class="intake-turns">${turns} turns</span>
-          <span class="confidence-dot ${confClass}" title="Confidence: ${Math.round(confidence * 100)}%"></span>
-          <span class="intake-vision" title="${escapeHtml(vision)}">${escapeHtml(vision)}</span>
-          <span class="intake-actions">
-            <button class="btn-icon download" onclick="event.stopPropagation(); downloadIntake('${intake.id}', '${escapeAttr(clientName)}')">Download</button>
-            <button class="btn-icon delete" onclick="event.stopPropagation(); deleteIntake('${intake.id}', this)">Delete</button>
-          </span>
-        </div>
-        <div class="intake-detail" id="detail-${intake.id}"></div>
-      `;
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      document.cookie = 'admin_token=; path=/api/admin; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      dashboardView.style.display = 'none';
+      loginView.style.display = 'block';
+      document.getElementById('password-input').value = '';
+    });
 
-      row.querySelector('.intake-row-header').addEventListener('click', () => {
-        toggleDetail(row, intake);
-      });
-
-      return row;
+    async function loadSessions() {
+      try {
+        const res = await fetch('/api/admin/sessions');
+        if (res.status === 401) {
+          dashboardView.style.display = 'none';
+          loginView.style.display = 'block';
+          return;
+        }
+        const data = await res.json();
+        renderSessions(data.sessions);
+      } catch (err) {
+        console.error('Failed to load sessions:', err);
+      }
     }
 
-    // ---- Expand / Collapse ----
-    async function toggleDetail(row, intake) {
-      if (row.classList.contains('expanded')) {
-        row.classList.remove('expanded');
+    function renderSessions(sessions) {
+      sessionsBody.innerHTML = '';
+      if (!sessions.length) {
+        emptyState.style.display = 'block';
         return;
       }
+      emptyState.style.display = 'none';
 
-      // Collapse others
-      document.querySelectorAll('.intake-row.expanded').forEach((r) => {
-        r.classList.remove('expanded');
+      sessions.forEach(s => {
+        const tr = document.createElement('tr');
+        const date = new Date(s.completed_at || s.created_at).toLocaleDateString();
+        const statusClass = s.status === 'Complete' ? 'complete' : s.status === 'Abandoned' ? 'abandoned' : 'started';
+        const downloadBtn = s.status === 'Complete'
+          ? `<button class="btn-sm btn-sm--download" data-dl="${s.id}">Download</button>`
+          : '';
+        tr.innerHTML = `
+          <td>${escapeHtml(s.client_name || 'Unknown')}</td>
+          <td>${date}</td>
+          <td><span class="status-badge status-badge--${statusClass}">${s.status}</span></td>
+          <td>${s.turn_count || 0}</td>
+          <td>
+            <div class="actions-cell">
+              <button class="btn-sm btn-sm--view" data-id="${s.id}">View</button>
+              ${downloadBtn}
+            </div>
+          </td>
+        `;
+        sessionsBody.appendChild(tr);
       });
 
-      const detail = row.querySelector('.intake-detail');
-
-      if (!detail.dataset.loaded) {
-        // Use the intake data we already have from the list response
-        detail.innerHTML = buildDetailHtml(intake);
-        detail.dataset.loaded = 'true';
-      }
-
-      row.classList.add('expanded');
-    }
-
-    function buildDetailHtml(intake) {
-      let html = '';
-
-      // Conversation transcript
-      const conversation = intake.conversation || intake.messages || [];
-      if (conversation.length > 0) {
-        html += `
-          <div class="detail-section">
-            <h3>Conversation Transcript</h3>
-            <div class="conversation-log">
-              ${conversation.map((msg) => {
-                const role = (msg.role || '').toLowerCase();
-                const isAi = role === 'assistant' || role === 'ai' || role === 'agent';
-                return `
-                  <div class="bubble ${isAi ? 'ai' : 'client'}">
-                    <div class="bubble-role">${isAi ? 'AI' : 'Client'}</div>
-                    ${escapeHtml(msg.content || msg.text || '')}
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      }
-
-      // Confidence breakdown
-      const confidenceBreakdown = intake.confidence_breakdown || intake.confidenceBreakdown || intake.confidence || {};
-      const categories = Object.entries(confidenceBreakdown);
-      if (categories.length > 0) {
-        html += `
-          <div class="detail-section">
-            <h3>Confidence Breakdown</h3>
-            <div class="confidence-grid">
-              ${categories.map(([key, value]) => {
-                const score = typeof value === 'number' ? value : (value.score || 0);
-                const pct = Math.round(score * 100);
-                const cls = score >= 0.7 ? 'high' : score >= 0.4 ? 'medium' : 'low';
-                const label = formatCategoryLabel(key);
-                return `
-                  <div class="confidence-item">
-                    <span class="label">${escapeHtml(label)}</span>
-                    <span class="score ${cls}">${pct}%</span>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      }
-
-      // Generated markdown
-      const markdown = intake.markdown || intake.generated_markdown || intake.generatedMarkdown || '';
-      if (markdown) {
-        html += `
-          <div class="detail-section">
-            <h3>Generated Markdown</h3>
-            <pre class="markdown-preview">${escapeHtml(markdown)}</pre>
-          </div>
-        `;
-      }
-
-      if (!html) {
-        html = '<div style="padding:20px;color:var(--muted);">No additional details available.</div>';
-      }
-
-      return html;
-    }
-
-    // ---- Download ----
-    async function downloadIntake(id, clientName) {
-      const res = await fetch(`/api/admin/intakes/${id}/markdown`, {
-        headers: { 'Authorization': `Bearer ${password}` }
+      sessionsBody.querySelectorAll('[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => toggleDetail(btn.dataset.id, btn.closest('tr')));
       });
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `intake-${clientName}.md`;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      sessionsBody.querySelectorAll('[data-dl]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.location.href = `/api/admin/sessions/${btn.dataset.dl}/download`;
+        });
+      });
     }
 
-    // ---- Delete ----
-    async function deleteIntake(id, btn) {
-      if (!confirm('Are you sure you want to delete this intake? This cannot be undone.')) return;
-
-      btn.disabled = true;
-      btn.textContent = '...';
+    async function toggleDetail(id, row) {
+      if (expandedRow) {
+        expandedRow.remove();
+        if (expandedRow.dataset.sessionId === id) {
+          expandedRow = null;
+          return;
+        }
+        expandedRow = null;
+      }
 
       try {
-        const res = await fetch(`/api/admin/intakes/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${password}` }
+        const res = await fetch(`/api/admin/sessions/${id}`);
+        const session = await res.json();
+
+        const detailRow = document.createElement('tr');
+        detailRow.dataset.sessionId = id;
+        const td = document.createElement('td');
+        td.colSpan = 5;
+
+        let html = '<div class="session-detail">';
+        html += '<h3>Conversation</h3>';
+
+        const messages = session.messages || [];
+        messages.forEach(m => {
+          html += `<div class="transcript-entry transcript-entry--${m.role}">
+            <div class="role">${m.role}</div>
+            ${escapeHtml(m.content)}
+          </div>`;
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (session.markdown) {
+          html += '<h3 style="margin-top:24px;">Generated PRP</h3>';
+          html += `<div class="prp-preview">${escapeHtml(session.markdown)}</div>`;
+        }
 
-        const row = btn.closest('.intake-row');
-        row.style.transition = 'opacity 0.3s, transform 0.3s';
-        row.style.opacity = '0';
-        row.style.transform = 'translateX(20px)';
-        setTimeout(() => {
-          row.remove();
-          updateCount();
-        }, 300);
+        html += '</div>';
+        td.innerHTML = html;
+        detailRow.appendChild(td);
+        row.after(detailRow);
+        expandedRow = detailRow;
       } catch (err) {
-        alert('Failed to delete intake: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = 'Delete';
+        console.error('Failed to load session detail:', err);
       }
-    }
-
-    function updateCount() {
-      const rows = intakeList.querySelectorAll('.intake-row');
-      countBadge.textContent = rows.length;
-      if (rows.length === 0) {
-        emptyState.style.display = 'block';
-      }
-    }
-
-    // ---- Utilities ----
-    function formatDate(isoString) {
-      if (!isoString) return '';
-      const d = new Date(isoString);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
-    }
-
-    function formatDuration(seconds) {
-      if (!seconds) return '';
-      const mins = Math.round(seconds / 60);
-      return `${mins} min`;
-    }
-
-    function truncate(str, max) {
-      if (!str) return '';
-      return str.length > max ? str.slice(0, max) + '...' : str;
-    }
-
-    function formatCategoryLabel(key) {
-      return key
-        .replace(/_/g, ' ')
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^\w/, (c) => c.toUpperCase())
-        .trim();
     }
 
     function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function escapeAttr(str) {
-      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
   </script>
 </body>

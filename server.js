@@ -1,53 +1,56 @@
 require('dotenv').config();
-
 const express = require('express');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const { initDB } = require('./src/services/db');
+
+const sessionRoutes = require('./src/routes/session');
+const ttsRoutes = require('./src/routes/tts');
+const downloadRoutes = require('./src/routes/download');
+const adminRoutes = require('./src/routes/admin');
+const convaiRoutes = require('./src/routes/convai');
+const webhookRoutes = require('./src/routes/webhook');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// JSON body parser for all routes EXCEPT webhook
-app.use((req, res, next) => {
-  if (req.path === '/api/webhook') {
-    // Webhook needs raw body for HMAC signature verification
-    express.raw({ type: 'application/json' })(req, res, next);
-  } else {
-    express.json()(req, res, next);
-  }
-});
-
-// Static files
+// Middleware
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Clean URL for admin dashboard
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+// API routes
+app.use('/api/session', sessionRoutes);
+app.use('/api/tts', ttsRoutes);
+app.use('/api/download', downloadRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/convai', convaiRoutes);
+app.use('/api/webhook', webhookRoutes);
 
-// Route mounting — only 3 route groups
-app.use('/api/webhook', require('./src/routes/webhook'));
-app.use('/api/download', require('./src/routes/download'));
-app.use('/api/admin', require('./src/routes/admin'));
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// Initialize DB and start server
-async function start() {
-  try {
-    const db = require('./src/services/db');
-    await db.initialize();
-    console.log('Database initialized');
-  } catch (err) {
-    console.warn('Database initialization skipped:', err.message);
+// SPA fallback — serve index.html for all non-API routes
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
+});
 
-  app.listen(PORT, () => {
-    console.log(`Voice Intake server running on port ${PORT}`);
+// Start with DB initialization
+initDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Voice Intake running on http://localhost:${PORT}`);
+      if (!process.env.ELEVENLABS_API_KEY) {
+        console.warn('⚠  ELEVENLABS_API_KEY not set — TTS will use browser fallback');
+      }
+      if (!process.env.ANTHROPIC_API_KEY) {
+        console.warn('⚠  ANTHROPIC_API_KEY not set — LLM features disabled');
+      }
+      if (!process.env.ELEVENLABS_AGENT_ID) {
+        console.warn('⚠  ELEVENLABS_AGENT_ID not set — ConvAI mode disabled');
+      }
+    });
+  })
+  .catch(err => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
   });
-}
-
-start();

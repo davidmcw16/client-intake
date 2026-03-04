@@ -1,110 +1,64 @@
-const { Pool, neonConfig } = require("@neondatabase/serverless");
-const ws = require("ws");
+const { Pool } = require('pg');
 
-neonConfig.webSocketConstructor = ws;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-async function initialize() {
-  // Migrate existing UUID column to VARCHAR(255) if needed
+async function initDB() {
   await pool.query(`
-    DO $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'intakes' AND column_name = 'session_id' AND data_type = 'uuid'
-      ) THEN
-        ALTER TABLE intakes ALTER COLUMN session_id TYPE VARCHAR(255) USING session_id::VARCHAR;
-      END IF;
-    END $$;
-  `).catch(() => {}); // Ignore if table doesn't exist yet
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS intakes (
-      id SERIAL PRIMARY KEY,
-      session_id VARCHAR(255) NOT NULL UNIQUE,
-      client_name VARCHAR(255) DEFAULT 'Client',
-      conversation JSONB NOT NULL,
-      markdown TEXT NOT NULL,
-      turn_count INTEGER,
-      confidence JSONB,
-      duration_ms INTEGER,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS sessions (
+      id UUID PRIMARY KEY,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      completed_at TIMESTAMPTZ,
+      is_complete BOOLEAN DEFAULT false,
+      messages JSONB DEFAULT '[]'::jsonb,
+      markdown TEXT,
+      client_name TEXT,
+      turn_count INTEGER DEFAULT 0
     )
-  `);
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_intakes_created_at ON intakes (created_at DESC)
   `);
 }
 
-async function saveIntake({
-  sessionId,
-  clientName,
-  conversation,
-  markdown,
-  turnCount,
-  confidence,
-  durationMs,
-  createdAt,
-  completedAt,
-}) {
+async function createSession(sessionId) {
   const result = await pool.query(
-    `INSERT INTO intakes (session_id, client_name, conversation, markdown, turn_count, confidence, duration_ms, created_at, completed_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT (session_id) DO NOTHING
-     RETURNING *`,
-    [
-      sessionId,
-      clientName,
-      JSON.stringify(conversation),
-      markdown,
-      turnCount,
-      JSON.stringify(confidence),
-      durationMs,
-      createdAt,
-      completedAt || new Date().toISOString(),
-    ]
+    'INSERT INTO sessions (id) VALUES ($1) RETURNING *',
+    [sessionId]
   );
   return result.rows[0];
 }
 
-async function getAllIntakes() {
+async function getSession(sessionId) {
   const result = await pool.query(
-    `SELECT * FROM intakes ORDER BY created_at DESC`
-  );
-  return result.rows;
-}
-
-async function getIntakeBySessionId(sessionId) {
-  const result = await pool.query(
-    `SELECT * FROM intakes WHERE session_id = $1`,
+    'SELECT * FROM sessions WHERE id = $1',
     [sessionId]
   );
   return result.rows[0] || null;
 }
 
-async function getIntakeById(id) {
+async function updateSession(sessionId, updates) {
+  const keys = Object.keys(updates);
+  const values = Object.values(updates);
+  const setClause = keys.map((k, i) => `${k} = $${i + 2}`).join(', ');
   const result = await pool.query(
-    `SELECT * FROM intakes WHERE id = $1`,
-    [id]
+    `UPDATE sessions SET ${setClause} WHERE id = $1 RETURNING *`,
+    [sessionId, ...values]
   );
-  return result.rows[0] || null;
+  return result.rows[0];
 }
 
-async function deleteIntake(id) {
+async function listCompletedSessions() {
   const result = await pool.query(
-    `DELETE FROM intakes WHERE id = $1 RETURNING id`,
-    [id]
+    'SELECT * FROM sessions WHERE is_complete = true ORDER BY completed_at DESC'
   );
-  return result.rows[0] || null;
+  return result.rows;
 }
 
-module.exports = {
-  initialize,
-  saveIntake,
-  getAllIntakes,
-  getIntakeBySessionId,
-  getIntakeById,
-  deleteIntake,
-};
+async function listAllSessions() {
+  const result = await pool.query(
+    'SELECT * FROM sessions ORDER BY created_at DESC'
+  );
+  return result.rows;
+}
+
+module.exports = { initDB, createSession, getSession, updateSession, listCompletedSessions, listAllSessions };

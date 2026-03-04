@@ -1,65 +1,63 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../services/db');
+const { getSession, listAllSessions } = require('../services/session-manager');
 
-// Auth middleware
-function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  const token = authHeader.slice(7);
-  if (token !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Invalid password' });
+function requireAdmin(req, res, next) {
+  const token = req.cookies?.admin_token;
+  if (!token || token !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 }
 
-router.use(requireAuth);
-
-// GET /api/admin/intakes — List all intakes
-router.get('/intakes', async (req, res) => {
-  try {
-    const intakes = await db.getAllIntakes();
-    const mapped = intakes.map(i => ({
-      ...i,
-      duration_minutes: i.duration_ms ? Math.round(i.duration_ms / 60000) : null
-    }));
-    res.json({ intakes: mapped });
-  } catch (err) {
-    console.error('Admin list error:', err);
-    res.status(500).json({ error: 'Failed to fetch intakes' });
+router.post('/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    res.cookie('admin_token', password, { httpOnly: true, path: '/api/admin' });
+    return res.json({ ok: true });
   }
+  res.status(401).json({ error: 'Invalid password' });
 });
 
-// GET /api/admin/intakes/:id/markdown — Download specific intake
-router.get('/intakes/:id/markdown', async (req, res) => {
-  try {
-    const intake = await db.getIntakeById(req.params.id);
-    if (!intake) return res.status(404).json({ error: 'Intake not found' });
-
-    const clientName = (intake.client_name || 'Client').replace(/[^a-zA-Z0-9]/g, '-');
-    const date = new Date(intake.created_at).toISOString().split('T')[0];
-
-    res.setHeader('Content-Type', 'text/markdown');
-    res.setHeader('Content-Disposition', `attachment; filename="intake-${clientName}-${date}.md"`);
-    res.send(intake.markdown);
-  } catch (err) {
-    console.error('Admin download error:', err);
-    res.status(500).json({ error: 'Failed to download' });
-  }
+router.get('/sessions', requireAdmin, async (req, res) => {
+  const sessions = await listAllSessions();
+  res.json({
+    sessions: sessions.map(s => {
+      let status = 'Started';
+      if (s.is_complete) status = 'Complete';
+      else if (s.turn_count > 0) status = 'Abandoned';
+      return {
+        id: s.id,
+        client_name: s.client_name,
+        created_at: s.created_at,
+        completed_at: s.completed_at,
+        turn_count: s.turn_count,
+        status
+      };
+    })
+  });
 });
 
-// DELETE /api/admin/intakes/:id — Delete an intake
-router.delete('/intakes/:id', async (req, res) => {
-  try {
-    const deleted = await db.deleteIntake(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Intake not found' });
-    res.json({ deleted: true });
-  } catch (err) {
-    console.error('Admin delete error:', err);
-    res.status(500).json({ error: 'Failed to delete' });
+router.get('/sessions/:id', requireAdmin, async (req, res) => {
+  const session = await getSession(req.params.id);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
   }
+  res.json(session);
+});
+
+router.get('/sessions/:id/download', requireAdmin, async (req, res) => {
+  const session = await getSession(req.params.id);
+  if (!session) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  if (!session.markdown) {
+    return res.status(400).json({ error: 'No PRP generated' });
+  }
+  const date = new Date(session.completed_at || Date.now()).toISOString().split('T')[0];
+  res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="intake-${session.client_name || 'client'}-${date}.md"`);
+  res.send(session.markdown);
 });
 
 module.exports = router;

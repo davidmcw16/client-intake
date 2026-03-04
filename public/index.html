@@ -2,98 +2,85 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Voice Intake</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Project Intake</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <h1>Tell me about your project</h1>
-      <p class="subtitle">I'll have a quick chat with you to understand your idea.
-         Just speak naturally — no technical knowledge needed.</p>
-      <p class="note">Please don't close this page during the conversation.</p>
-    </header>
+  <div id="app">
 
-    <!-- ElevenLabs widget renders here -->
-    <div id="widget-container">
-      <elevenlabs-convai agent-id="agent_1401k39er2refh4s5fgd80jgskbt"></elevenlabs-convai>
+    <!-- Screen: Welcome -->
+    <div class="screen active" id="screen-welcome">
+      <h1 class="welcome-title">Tell me about<br>your project</h1>
+      <p class="welcome-subtitle">I'll ask a few quick questions to understand your idea. Just speak naturally — no technical knowledge needed.</p>
+      <button class="btn btn-primary" id="btn-start">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Tap to Begin
+      </button>
     </div>
 
-    <!-- Shown after conversation completes -->
-    <div id="download-section" class="hidden">
-      <div class="success-icon">&#10003;</div>
-      <h2>Your Project Brief is Ready</h2>
-      <p class="subtitle" id="download-status">Preparing your brief...</p>
-      <div id="download-spinner" class="spinner"></div>
-      <button id="btn-download" class="btn-primary hidden">Download Brief</button>
-      <a id="btn-start-over" class="toggle-link" href="#">Start Over</a>
+    <!-- Screen: Conversation -->
+    <div class="screen" id="screen-question">
+
+      <!-- Chat history (scrollable) -->
+      <div class="chat-container" id="chat-container"></div>
+
+      <div class="voice-indicator">
+        <div class="voice-orb voice-orb--idle" id="voice-orb">
+          <canvas id="orb-canvas" width="200" height="200"></canvas>
+        </div>
+        <span class="voice-label" id="voice-label">Preparing...</span>
+      </div>
+
+      <!-- Transcript area -->
+      <div class="transcript-area" id="transcript-area" style="display:none;">
+        <p class="transcript-text" id="transcript-text"></p>
+      </div>
+
+      <!-- Text fallback -->
+      <div class="text-fallback" id="text-fallback" style="display:none;">
+        <textarea id="text-input" placeholder="Type your message here..." rows="4"></textarea>
+      </div>
+
+      <!-- Listening controls -->
+      <div class="actions" id="actions-listening" style="display:none;">
+        <button class="btn btn-secondary btn-small" id="btn-stop-listening">Done Speaking</button>
+      </div>
+
+      <!-- Confirm controls -->
+      <div class="actions" id="actions-confirm" style="display:none;">
+        <button class="btn btn-secondary btn-small" id="btn-retry">Try Again</button>
+        <button class="btn btn-primary btn-small" id="btn-accept">Send</button>
+      </div>
+
+      <!-- Text submit -->
+      <div class="actions" id="actions-text" style="display:none;">
+        <button class="btn btn-primary btn-small" id="btn-submit-text">Submit</button>
+      </div>
+
+      <!-- Mode toggle -->
+      <button class="mode-toggle" id="btn-mode-toggle">Switch to typing</button>
     </div>
+
+    <!-- Screen: Summary -->
+    <div class="screen" id="screen-summary">
+      <h2 class="summary-title">Your PRP is Ready</h2>
+      <div class="summary-container" id="summary-container"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-download">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Brief
+        </button>
+      </div>
+    </div>
+
   </div>
 
-  <!-- ElevenLabs Conversational AI SDK -->
-  <script src="https://elevenlabs.io/convai-widget/index.js" async type="text/javascript"></script>
-  <script>
-    let conversationId = null;
-    let pollCount = 0;
-    const MAX_POLLS = 15;
-    const POLL_INTERVAL_MS = 2000;
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
-    // Listen for ElevenLabs widget events
-    document.addEventListener('elevenlabs-convai:call-ended', (event) => {
-      conversationId = event.detail?.conversationId || event.detail?.conversation_id;
-      if (!conversationId) {
-        console.warn('No conversation ID in call-ended event');
-        return;
-      }
-
-      // Show download section with spinner
-      document.getElementById('widget-container').classList.add('hidden');
-      document.getElementById('download-section').classList.remove('hidden');
-      document.getElementById('download-status').textContent = 'Preparing your brief...';
-      document.getElementById('download-spinner').classList.remove('hidden');
-
-      pollForBrief();
-    });
-
-    async function pollForBrief() {
-      if (pollCount >= MAX_POLLS) {
-        document.getElementById('download-status').textContent =
-          'Your brief is being prepared and will be available shortly. Please check back in a moment.';
-        document.getElementById('download-spinner').classList.add('hidden');
-        showDownloadButton();
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/download/${conversationId}`, { method: 'HEAD' });
-        if (res.ok) {
-          document.getElementById('download-status').textContent = 'Your brief is ready to download.';
-          document.getElementById('download-spinner').classList.add('hidden');
-          showDownloadButton();
-          return;
-        }
-      } catch (err) {
-        console.warn('Poll attempt failed:', err);
-      }
-
-      pollCount++;
-      setTimeout(pollForBrief, POLL_INTERVAL_MS);
-    }
-
-    function showDownloadButton() {
-      const btn = document.getElementById('btn-download');
-      btn.classList.remove('hidden');
-      btn.addEventListener('click', () => {
-        window.location.href = `/api/download/${conversationId}`;
-      });
-    }
-
-    // Start Over
-    document.getElementById('btn-start-over').addEventListener('click', (e) => {
-      e.preventDefault();
-      window.location.reload();
-    });
-  </script>
+  <script src="/js/bundle.js"></script>
 </body>
 </html>
