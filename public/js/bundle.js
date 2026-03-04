@@ -24925,8 +24925,8 @@
           const t2 = e2.signedUrl.includes("?") ? "&" : "?";
           a2 = `${e2.signedUrl}${t2}source=${c2}&version=${r3}`;
         } else a2 = `${s3}/v1/convai/conversation?agent_id=${e2.agentId}&source=${c2}&version=${r3}`;
-        const h3 = ["convai"];
-        e2.authorization && h3.push(`bearer.${e2.authorization}`), t = new WebSocket(a2, h3);
+        const h3 = [];
+        e2.authorization && h3.push(`bearer.${e2.authorization}`), t = h3.length > 0 ? new WebSocket(a2, h3) : new WebSocket(a2);
         const g2 = await new Promise((n2, o3) => {
           t.addEventListener("open", () => {
             var n3;
